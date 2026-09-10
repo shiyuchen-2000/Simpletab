@@ -1,2 +1,0 @@
-# Cloudflare Pages 代理：网站环境下图标抓取走此路径（服务端转发 google s2，绕过浏览器 CORS）
-/favicon/:host  https://www.google.com/s2/favicons?domain=:host&sz=64  200
