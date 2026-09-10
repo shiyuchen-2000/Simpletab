@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>起始页样例 · 极光 / 晨雾</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+  /* ===== 背景层：网格渐变 + 噪点 + 暗角 ===== */
+  #stage{position:fixed;inset:0;background:var(--bg);background-size:cover;background-position:center;transition:background .8s}
+  #stage::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #stage .vig{position:absolute;inset:0;background:radial-gradient(115% 90% at 50% 45%,transparent 42%,rgba(0,0,0,.32) 100%)}
+
+  /* ===== ① 极光 Aurora ===== */
+  #stage[data-scheme="aurora"][data-mode="light"]{
+    --bg:radial-gradient(52% 46% at 18% 12%, rgba(255,255,255,.95), transparent 66%),
+         radial-gradient(48% 42% at 84% 18%, rgba(150,214,222,.5), transparent 66%),
+         radial-gradient(55% 50% at 48% 96%, rgba(168,176,236,.4), transparent 66%),
+         radial-gradient(30% 28% at 66% 52%, rgba(244,172,196,.25), transparent 70%),
+         linear-gradient(162deg,#f6f8fc 0%,#e4eef4 45%,#d9e4ef 100%);
+    --time:linear-gradient(180deg,#1c2433 0%,#3c4a5e 55%,#5a6b80 100%);
+    --tsh:0 2px 18px rgba(255,255,255,.55);
+    --date:#6d7f93;
+    --glass:rgba(255,255,255,.72);--glass-b:rgba(255,255,255,.8);
+    --placeholder:rgba(40,60,75,.5);
+  }
+  #stage[data-scheme="aurora"][data-mode="dark"]{
+    --bg:radial-gradient(55% 50% at 20% 14%, rgba(56,110,190,.6), transparent 66%),
+         radial-gradient(50% 45% at 82% 18%, rgba(140,72,186,.5), transparent 66%),
+         radial-gradient(65% 55% at 52% 92%, rgba(26,138,160,.55), transparent 66%),
+         radial-gradient(38% 32% at 40% 55%, rgba(210,90,150,.28), transparent 72%),
+         linear-gradient(160deg,#080d1c 0%,#0e1730 55%,#13223c 100%);
+    --time:linear-gradient(180deg,#f6faff 0%,#cfddee 55%,#93aec8 100%);
+    --tsh:0 0 44px rgba(120,200,230,.28), 0 2px 22px rgba(0,0,0,.42);
+    --date:#9db3c8;
+    --glass:rgba(255,255,255,.1);--glass-b:rgba(255,255,255,.16);
+    --placeholder:rgba(220,235,245,.55);
+  }
+  /* ===== ③ 晨雾 Slate ===== */
+  #stage[data-scheme="slate"][data-mode="light"]{
+    --bg:radial-gradient(55% 50% at 20% 10%, rgba(255,255,255,.92), transparent 68%),
+         radial-gradient(48% 42% at 84% 20%, rgba(190,205,225,.5), transparent 68%),
+         radial-gradient(52% 48% at 50% 100%, rgba(210,200,225,.42), transparent 68%),
+         radial-gradient(30% 30% at 62% 55%, rgba(220,230,240,.45), transparent 72%),
+         linear-gradient(165deg,#f5f6f8 0%,#e9ecf1 50%,#e0e4ec 100%);
+    --time:linear-gradient(180deg,#22262e 0%,#474f5d 60%,#646d7c 100%);
+    --tsh:0 2px 18px rgba(255,255,255,.6);
+    --date:#7c8595;
+    --glass:rgba(255,255,255,.72);--glass-b:rgba(255,255,255,.8);
+    --placeholder:rgba(55,62,75,.5);
+  }
+  #stage[data-scheme="slate"][data-mode="dark"]{
+    --bg:radial-gradient(50% 46% at 20% 12%, rgba(80,96,120,.45), transparent 68%),
+         radial-gradient(46% 42% at 84% 20%, rgba(110,90,130,.4), transparent 68%),
+         radial-gradient(55% 50% at 50% 96%, rgba(60,90,105,.42), transparent 68%),
+         linear-gradient(160deg,#0d0f14 0%,#161a22 55%,#1b2029 100%);
+    --time:linear-gradient(180deg,#f2f4f7 0%,#c6ccd6 55%,#8f98a6 100%);
+    --tsh:0 0 40px rgba(150,170,195,.22), 0 2px 20px rgba(0,0,0,.4);
+    --date:#8b94a3;
+    --glass:rgba(255,255,255,.09);--glass-b:rgba(255,255,255,.14);
+    --placeholder:rgba(215,222,232,.5);
+  }
+
+  /* ===== 时钟 ===== */
+  #clockWrap{position:fixed;left:50%;top:7vh;transform:translateX(-50%);text-align:center;z-index:2;user-select:none}
+  .time{font-size:clamp(4rem,12vw,7rem);font-weight:300;line-height:.95;letter-spacing:-.02em;display:flex;align-items:baseline;justify-content:center;gap:.06em;font-variant-numeric:tabular-nums;
+    background:var(--time);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:var(--tsh)}
+  .date{margin-top:.9rem;font-size:clamp(.9rem,2vw,1.15rem);letter-spacing:.24em;color:var(--date);transition:color .5s}
+
+  /* ===== 搜索框（毛玻璃胶囊） ===== */
+  #search{position:fixed;left:50%;top:32vh;transform:translateX(-50%);z-index:2;display:flex;align-items:center;gap:.65rem;
+    width:min(400px,80vw);height:58px;padding:0 .7rem 0 1.25rem;border-radius:999px;
+    background:var(--glass);border:1px solid var(--glass-b);
+    backdrop-filter:blur(22px) saturate(170%);box-shadow:0 12px 38px rgba(0,20,30,.16)}
+  #search .si{flex:none;color:var(--date);display:grid;place-items:center}
+  #search .sp{flex:1;display:flex;align-items:center;font-size:1.02rem;color:var(--placeholder)}
+  #search .pill{flex:none;font-size:.8rem;color:var(--date);background:var(--glass);border:1px solid var(--glass-b);
+    padding:.32rem .72rem;border-radius:999px}
+
+  /* ===== 拓展坞（底部玻璃条） ===== */
+  #dock{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;display:flex;gap:14px;
+    padding:11px 18px;border-radius:24px;background:var(--glass);border:1px solid var(--glass-b);
+    backdrop-filter:blur(22px) saturate(170%);box-shadow:0 14px 40px rgba(0,0,0,.2)}
+  #dock i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:19px;font-style:normal;font-weight:600;
+    background:linear-gradient(135deg,#39c5bb,#166e74);color:#fff;box-shadow:0 6px 14px rgba(57,197,187,.35)}
+
+  /* ===== 控件 ===== */
+  .ctl{position:fixed;bottom:calc(26px + 70px);left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:10px;align-items:center;padding:9px;border-radius:999px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(18px);box-shadow:0 14px 40px rgba(0,0,0,.18)}
+  .ctl .grp{display:flex;gap:4px}
+  .ctl .sep{width:1px;height:22px;background:rgba(0,0,0,.12)}
+  .ctl button{border:none;background:transparent;padding:.5rem .95rem;border-radius:999px;font-size:.85rem;color:#3a3f47;cursor:pointer;transition:background .22s,color .22s;white-space:nowrap}
+  .ctl button.on{background:#3a3f47;color:#fff}
+  .tag{position:fixed;top:26px;left:28px;z-index:3;color:#fff;font-size:.8rem;letter-spacing:.1em;padding:.4rem .95rem;border-radius:999px;background:rgba(0,0,0,.32);backdrop-filter:blur(10px)}
+</style>
+</head>
+<body>
+<div class="tag" id="tag">① 极光 · 亮色</div>
+<div id="stage" data-scheme="aurora" data-mode="light">
+  <div class="vig"></div>
+</div>
+<div id="clockWrap">
+  <div class="time"><span>09</span><span>:</span><span>41</span></div>
+  <div class="date">2026年9月8日 星期二</div>
+</div>
+<div id="search">
+  <span class="si"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+  <span class="sp">搜索...</span>
+  <span class="pill">百度 ▾</span>
+</div>
+<div id="dock"><i>G</i><i>B</i><i>知</i><i>M</i><i>V</i></div>
+
+<div class="ctl">
+  <div class="grp" id="schemes">
+    <button class="on" data-scheme="aurora">① 极光</button>
+    <button data-scheme="slate">③ 晨雾</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp" id="modes">
+    <button class="on" data-mode="light">亮色</button>
+    <button data-mode="dark">暗色</button>
+  </div>
+</div>
+<script>
+const stage=document.getElementById('stage'),tag=document.getElementById('tag')
+const NAMES={aurora:'① 极光',slate:'③ 晨雾'}
+function paint(){tag.textContent=`${NAMES[stage.dataset.scheme]} · ${stage.dataset.mode==='light'?'亮色':'暗色'}`}
+document.querySelectorAll('#schemes button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#schemes button').forEach(x=>x.classList.remove('on'));b.classList.add('on')
+  stage.dataset.scheme=b.dataset.scheme;paint()
+})
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#modes button').forEach(x=>x.classList.remove('on'));b.classList.add('on')
+  stage.dataset.mode=b.dataset.mode;paint()
+})
+</script>
+</body>
+</html>

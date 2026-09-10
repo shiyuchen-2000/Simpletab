@@ -1,0 +1,13 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+
+# 发布包（发行用 GitHub Releases）
+release/
+*.zip
+
+# 编辑器 / 本地环境
+.trae/
+.DS_Store

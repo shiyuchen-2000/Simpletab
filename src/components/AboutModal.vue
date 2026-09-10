@@ -1,0 +1,138 @@
+<script setup>
+import { ref, watch, nextTick } from 'vue'
+import { ui } from '../store'
+import { useGearModal } from '../store/useGearModal'
+
+/* 更新日志：新版本在上，逐条简洁列出 */
+const CHANGES = [
+  {
+    ver: 'v1.2.3',
+    items: [
+      '新增「极光」默认壁纸：网格渐变质感，亮 / 暗主题自动适配',
+      '时钟升级为渐变文字，日期独立配色，亮 / 暗主题分别适配',
+      '弹窗打开 / 关闭改为 3D 翻转，关闭按钮 hover 时弹窗 3D 倾斜',
+      '优化弹窗关闭按钮：加大并固定右上角，扩大点击热区，hover 红色高亮',
+      '优化视图切换：主页上浮进入、链接页上浮淡入、主页退出平滑淡出',
+      '修复：进入主页时搜索框毛玻璃「先透明后加载」的突兀感',
+      '修复：链接向右拖动时多移动一个位置',
+      '修复：更换壁纸后顶部残留默认壁纸的细线',
+      '修复：进入链接页时磁贴出现黑灰色边框',
+      '优化内存占用：移除背景噪点合成层'
+    ]
+  },
+  {
+    ver: 'v1.2.2',
+    items: [
+      '优化：点击「+」添加链接时，表单改为相对磁贴弹出，不再偏移至页面居中',
+      '新增「新手指引」：以聚焦 + 实际操作引导搜索用法、链接页、添加 / 删除链接、添加到拓展坞等核心功能，支持一键跳过',
+      '新增引导细节：重点词以主题色高亮，弹窗 / 右键菜单打开时自动聚焦并提示「点空白处关闭」'
+    ]
+  },
+  {
+    ver: 'v1.2.1',
+    items: [
+      '新增图标本地缓存：图标下载后存于浏览器本地，重复打开新标签页不再重新加载，秒开无闪烁',
+      '修复：自动适配图标与字母叠加、个别网站图标加载不出的问题',
+      '优化打开动画：文件夹面板从对应磁贴展开 / 落回，设置 / 壁纸 / 关于面板从设置按钮弹出 / 落回',
+      '壁纸存储升级：改用 IndexedDB 原图直存，4K 以内原画质显示不再模糊，内存与存储占用同步降低',
+      '新增「数据管理」：设置与链接可分别导出 / 导入，支持立即同步与从云端恢复'
+    ]
+  },
+  {
+    ver: 'v1.2.0',
+    items: [
+      '新增图标外观：形状（圆角 / 方形 / 超椭圆 / 圆形）、尺寸、光晕强度均可调',
+      '新增磁贴悬浮动效：上浮距离可调，支持一键关闭',
+      '新增玻璃高光：面板顶部高光反光边，质感更精致',
+      '新增磁贴名称显示模式：始终显示 / 悬浮显示 / 不显示',
+      '悬浮或不显示名称时图标垂直居中，悬浮时图标上移并浮现标题',
+      '文件夹图标大小与磁贴图标保持一致',
+      '设置界面重新分组：主题 / 材质与质感 / 时钟 / 磁贴设置 / 搜索框 / 拓展坞',
+      '实时预览固定在设置弹窗顶部，调节时始终可见',
+      '新增「常用 + 个性化」两级设置，展开查看全部样式项，带过渡动画',
+      '优化设置列表滚动条与内容的间距'
+    ]
+  },
+  {
+    ver: 'v1.1.1',
+    items: [
+      '新增「打开方式」：链接可在新标签页或当前页打开',
+      '新增「搜索框圆角」调节，支持实时预览',
+      '搜索框体验升级：光标跟随主题色、聚焦发光、输入后保持展开、Esc 一键清空、下拉淡出',
+      '优化卡片密度「宽松」：间距、图标与内部留白整体放大',
+      '暗色模式壁纸压暗调亮',
+      '新增数据云端备份：跟随浏览器账号同步，清缓存后自动恢复，不再复位'
+    ]
+  },
+  {
+    ver: 'v1.1.0',
+    items: [
+      '新增主题色自定义：单一主色，按钮 / 图标 / 文字自动适配，对比度自动达标',
+      '新增实时预览：设置里可即时查看主题 / 布局效果',
+      '新增布局微调：毛玻璃强度、卡片圆角、卡片密度',
+      '搜索引擎：点击胶囊改为下拉菜单选择，保留 Tab 键循环',
+      '设置界面：大模块之间增加分隔线，浏览更清晰',
+      '优化时钟字体：剔除图标 / 符号类字体，自动识别系统中已安装的字体（含第三方）'
+    ]
+  },
+  {
+    ver: 'v1.0.0',
+    items: [
+      '首个版本：时钟、搜索、快捷链接、文件夹、壁纸主题、拓展坞、明暗主题'
+    ]
+  }
+]
+
+/* 滚动更新日志时聚焦弹窗：隐藏图标/作者，让日志占据更大空间。
+   监听 changelog 自身滚动；聚焦只隐藏 hero，不改 changelog 尺寸，避免 Chromium 重置其 scrollTop 导致反复闪烁。 */
+const logFocused = ref(false)
+function onLogScroll(e) {
+  logFocused.value = e.target.scrollTop > 0
+}
+watch(() => ui.modal, async v => {
+  if (v === 'about') {
+    logFocused.value = false
+    await nextTick()
+    const m = document.querySelector('.about-modal')
+    if (m) m.scrollTop = 0
+  }
+})
+
+/* ---------- 从设置按钮弹出 / 落回 ---------- */
+const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
+</script>
+
+<template>
+  <div class="modal-backdrop" :class="{ show: ui.modal === 'about' && !closing, closing }" @click.self="closeModal">
+    <div class="modal about-modal" ref="modalRef" :class="{ 'log-focus': logFocused }" :style="{ transformOrigin: modalOrigin, width: 'min(380px,92vw)' }">
+      <div class="m-head" style="justify-content:flex-end;padding-bottom:.35rem;">
+        <button class="m-close" @click="closeModal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+
+      <div class="am-hero">
+        <div class="am-logo">
+          <img src="/icons/icon300.png" alt="SimpleTab">
+        </div>
+        <div class="am-info">
+          <div class="am-name">SimpleTab 简页</div>
+          <div class="am-meta">
+            <span class="am-chip">v1.2.3</span>
+            <span>作者 · 史宇辰</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="am-sep"></div>
+
+      <div class="am-log-head">更新日志</div>
+      <div class="changelog" @scroll="onLogScroll">
+        <div v-for="c in CHANGES" :key="c.ver" class="cl-item">
+          <span class="cl-ver">{{ c.ver }}</span>
+          <ul>
+            <li v-for="(t, i) in c.items" :key="i">{{ t }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
