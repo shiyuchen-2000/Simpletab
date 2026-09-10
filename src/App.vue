@@ -99,6 +99,7 @@ function onClick(e) {
   if (state.view !== 'links') return
   if (ui.folderOpenId || ui.folderClosing) {
     if (e.target.classList.contains('folder-backdrop')) closeFolder()
+    else if (!e.target.closest('.context-menu')) closeCtx()   // 文件夹内点空白 / 磁贴：关闭右键菜单
     return
   }
   if (!isInteractiveHit(e)) setView('home')
