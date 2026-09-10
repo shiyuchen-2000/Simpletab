@@ -76,7 +76,7 @@ const DEFAULT_LINKS = [
 const DEFAULT_FOLDERS = [{ id: 'f1', title: '开发工具' }]
 
 const DEFAULTS = {
-  view: 'home', theme: 'system', hour12: false, showSeconds: true, blink: true,
+  view: 'home', theme: 'dark', hour12: false, showSeconds: false, blink: false,
   clockFont: 'system-ui', clockColor: null, clockPos: 'top',
   showDate: true, dateFormat: 'cn-long', dateColor: null,
   engine: 'baidu', wallpaper: null, dockEnabled: true, dockCount: 7,
