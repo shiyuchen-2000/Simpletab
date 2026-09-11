@@ -6,6 +6,15 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.2.5',
+    items: [
+      '新增「视频壁纸」：选择本地视频作为新标签页背景，静音循环自动播放',
+      '进入快捷链接页时视频自动暂停为静态帧（模糊背景），返回主页恢复播放，降低 GPU 消耗',
+      '视频壁纸上限 50MB，原文件直存本机 IndexedDB，不参与云同步',
+      '遵循系统「减少动态效果」：开启时视频仅显示首帧，不自动播放'
+    ]
+  },
+  {
     ver: 'v1.2.4',
     items: [
       '新增「搜索引擎偏好」：支持增删改、拖拽排序、常用模板一键填入，编辑实时同步搜索框引擎胶囊与下拉',
@@ -124,7 +133,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.2.4</span>
+            <span class="am-chip">v1.2.5</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>
