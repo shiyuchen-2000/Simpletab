@@ -9,6 +9,7 @@ const GROUPS = computed(() => [
     label: '主题',
     rows: [
       { id: 'theme', title: '外观', desc: '亮色 / 黑暗 / 跟随系统', keywords: ['外观', '主题', '亮色', '黑暗', '跟随系统', 'theme'] },
+      { id: 'style', title: '风格', desc: '毛玻璃 / Fluent 2 设计风格，可随时切换', keywords: ['风格', '毛玻璃', 'Fluent', '设计', '微软', 'style'] },
       { id: 'accentColor', title: '主题色', desc: '自定义强调色，按钮 / 图标 / 文字自动适配', keywords: ['主题色', '强调色', '自定义颜色', '颜色', 'accent', 'color'] },
       { id: 'vignette', title: '壁纸暗角', desc: '在壁纸边缘添加黑色晕影，压暗壁纸', keywords: ['壁纸暗角', '暗角', '晕影', '压暗', 'vignette'] }
     ]
@@ -69,7 +70,7 @@ const keywordMatch = (row, q) => {
   return q.split(/\s+/).every(k => text.includes(k))
 }
 /* 常用项 = 颜色 + 布局；其余样式 / 行为设置归入「个性化」，点按钮展开 */
-const BASIC_ROWS = new Set(['theme', 'accentColor', 'clockColor', 'dateColor', 'pos', 'density', 'iconSize'])
+const BASIC_ROWS = new Set(['theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'pos', 'density', 'iconSize'])
 let initPersonalized = false
 try { initPersonalized = localStorage.getItem('simpletab_personalized') === '1' } catch (e) { /* ignore */ }
 const showPersonalized = ref(initPersonalized)
@@ -96,6 +97,7 @@ const visibleRows = computed(() => {
 const hourOptions = [['12', '12 小时'], ['24', '24 小时']]
 const posOptions = [['top', '顶部'], ['mid', '中部'], ['bottom', '底部'], ['left', '左上'], ['right', '右上']]
 const themeOptions = [['light', '亮色'], ['dark', '黑暗'], ['system', '跟随系统']]
+const styleOptions = [['glass', '毛玻璃'], ['fluent', 'Fluent 2']]
 const dateOptions = [
   ['cn-long', '2026年8月14日 星期五'],
   ['cn-short', '2026-08-14 周五'],
@@ -108,6 +110,9 @@ const shapeOptions = [['rounded', '圆角'], ['square', '方形'], ['squircle', 
 const tileTextOptions = [['always', '始终显示'], ['hover', '悬浮显示'], ['none', '不显示']]
 /* 开关行字段映射（state 里的布尔字段名） */
 const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine' }
+/* Fluent 风格下固定的材质类设置项：在 CSS [data-style="fluent"] 块中被 Fluent 规范值覆盖，故置灰不可调 */
+const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
+const rowFixed = r => state.style === 'fluent' && FIXED_ROWS.includes(r.id)
 
 const clockColorVal = computed(() => state.clockColor || (resolvedTheme.value === 'dark' ? '#f2fdfb' : '#0d2b2e'))
 const dateColorVal = computed(() => state.dateColor || (resolvedTheme.value === 'dark' ? '#e9fbf9' : '#0d2b2e'))
@@ -149,6 +154,7 @@ function setOpenIn(v) { state.linkOpenIn = v; save() }
 function setHour(v) { state.hour12 = v === '12'; save() }
 function setClockPos(v) { state.clockPos = v; save() }
 function setTheme(v) { state.theme = v; save() }
+function setStyle(v) { state.style = v; save() }
 function setDateFormat(v) { state.dateFormat = v; save() }
 function setDockCount(v) { state.dockCount = parseInt(v, 10); save() }
 function toggle(field) { state[field] = !state[field]; save() }
@@ -232,9 +238,9 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               </div>
             </div>
             <!-- 开关行 -->
-            <div v-else-if="toggleField[r.id]" class="set-row">
+            <div v-else-if="toggleField[r.id]" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">{{ r.title }}</div><div class="r-d">{{ r.desc }}</div></div>
-              <button class="switch" :class="{ on: state[toggleField[r.id]] }" @click="toggle(toggleField[r.id])"></button>
+              <button class="switch" :class="{ on: state[toggleField[r.id]] }" :disabled="rowFixed(r)" @click="toggle(toggleField[r.id])"></button>
             </div>
             <!-- 日期格式 -->
             <div v-else-if="r.id === 'dateFmt'" class="set-row">
@@ -253,19 +259,19 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               </div>
             </div>
             <!-- 透明度滑块 -->
-            <div v-else-if="['searchOpacity','dockOpacity'].includes(r.id)" class="set-row">
+            <div v-else-if="['searchOpacity','dockOpacity'].includes(r.id)" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">{{ r.title }}</div><div class="r-d">{{ r.desc }}</div></div>
               <div class="opacity-row">
-                <input type="range" min="0.3" max="0.95" step="0.01"
+                <input type="range" min="0.3" max="0.95" step="0.01" :disabled="rowFixed(r)"
                        :value="state[r.id]" @input="e => { state[r.id] = parseFloat(e.target.value); save() }">
                 <span class="opacity-val">{{ Math.round(state[r.id] * 100) }}%</span>
               </div>
             </div>
             <!-- 搜索框圆角 -->
-            <div v-else-if="r.id === 'searchRadius'" class="set-row">
+            <div v-else-if="r.id === 'searchRadius'" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">搜索框圆角</div><div class="r-d">胶囊(29px)到方形(10px)之间调节，实时预览</div></div>
               <div class="opacity-row">
-                <input type="range" min="10" max="29" step="1" :value="searchRadiusVal" @input="e => setSearchRadius(e.target.value)">
+                <input type="range" min="10" max="29" step="1" :disabled="rowFixed(r)" :value="searchRadiusVal" @input="e => setSearchRadius(e.target.value)">
                 <span class="opacity-val">{{ searchRadiusVal }}px</span>
               </div>
             </div>
@@ -291,6 +297,15 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
                 <button v-for="[v, label] in themeOptions" :key="v" :class="{ on: state.theme === v }" @click="setTheme(v)">{{ label }}</button>
               </div>
             </div>
+            <!-- 风格 -->
+            <div v-else-if="r.id === 'style'" class="set-row">
+              <div><div class="r-t">风格</div><div class="r-d">毛玻璃 / Fluent 2，可随时切换</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in styleOptions" :key="v" :class="{ on: state.style === v }" @click="setStyle(v)">{{ label }}</button>
+              </div>
+            </div>
+            <!-- Fluent 风格提示：独立整行，避免长文字挤压 seg 控件宽度导致换行错位 -->
+            <p v-else-if="r.id === 'style' && state.style === 'fluent'" class="style-hint">Fluent 风格下，材质与质感设置将固定为 Fluent 规范值（置灰不可调）</p>
             <!-- 主题色 -->
             <div v-else-if="r.id === 'accentColor'" class="set-row" style="align-items:flex-start;">
               <div><div class="r-t">主题色</div><div class="r-d">自定义强调色，按钮 / 图标 / 文字自动适配</div></div>
@@ -307,18 +322,18 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               </div>
             </div>
             <!-- 毛玻璃强度 -->
-            <div v-else-if="r.id === 'glass'" class="set-row">
+            <div v-else-if="r.id === 'glass'" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">毛玻璃强度</div><div class="r-d">面板与卡片的透明程度</div></div>
               <div class="opacity-row">
-                <input type="range" min="0.15" max="0.85" step="0.01" :value="glassVal" @input="e => setGlass(e.target.value)">
+                <input type="range" min="0.15" max="0.85" step="0.01" :disabled="rowFixed(r)" :value="glassVal" @input="e => setGlass(e.target.value)">
                 <span class="opacity-val">{{ Math.round(glassVal * 100) }}%</span>
               </div>
             </div>
             <!-- 卡片圆角 -->
-            <div v-else-if="r.id === 'radius'" class="set-row">
+            <div v-else-if="r.id === 'radius'" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">卡片圆角</div><div class="r-d">磁贴与拓展坞的圆角大小</div></div>
               <div class="opacity-row">
-                <input type="range" min="8" max="30" step="1" :value="radiusVal" @input="e => setRadius(e.target.value)">
+                <input type="range" min="8" max="30" step="1" :disabled="rowFixed(r)" :value="radiusVal" @input="e => setRadius(e.target.value)">
                 <span class="opacity-val">{{ radiusVal }}px</span>
               </div>
             </div>
@@ -346,18 +361,18 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               </div>
             </div>
             <!-- 图标光晕 -->
-            <div v-else-if="r.id === 'iconGlow'" class="set-row">
+            <div v-else-if="r.id === 'iconGlow'" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">图标光晕</div><div class="r-d">图标底部光晕的强弱</div></div>
               <div class="opacity-row">
-                <input type="range" min="0" max="100" step="1" :value="state.iconGlow" @input="e => setIconGlow(e.target.value)">
+                <input type="range" min="0" max="100" step="1" :disabled="rowFixed(r)" :value="state.iconGlow" @input="e => setIconGlow(e.target.value)">
                 <span class="opacity-val">{{ state.iconGlow }}%</span>
               </div>
             </div>
             <!-- 悬浮动效 -->
-            <div v-else-if="r.id === 'tileHover'" class="set-row">
+            <div v-else-if="r.id === 'tileHover'" class="set-row" :class="{ fixed: rowFixed(r) }">
               <div><div class="r-t">悬浮动效</div><div class="r-d">悬停上浮距离，0 关闭</div></div>
               <div class="opacity-row">
-                <input type="range" min="0" max="12" step="1" :value="state.tileHoverLift" @input="e => setTileHover(e.target.value)">
+                <input type="range" min="0" max="12" step="1" :disabled="rowFixed(r)" :value="state.tileHoverLift" @input="e => setTileHover(e.target.value)">
                 <span class="opacity-val">{{ state.tileHoverLift }}px</span>
               </div>
             </div>
@@ -444,4 +459,9 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 .accent-swatch:hover{transform:scale(1.15);box-shadow:0 3px 8px rgba(0,0,0,.25);}
 .accent-swatch.on{outline:2px solid var(--text);outline-offset:2px;}
 .set-empty{text-align:center;color:var(--text-faint);font-size:.85rem;padding:1.5rem 0;}
+/* Fluent 风格提示：独立整行，不挤压 seg 控件宽度 */
+.style-hint{font-size:.76rem;color:var(--text-faint);line-height:1.5;padding:.35rem .2rem .5rem;border-top:1px dashed var(--glass-border);}
+/* Fluent 风格下材质类设置固定：置灰不可交互 */
+.set-row.fixed{opacity:.5;}
+.set-row.fixed input[type="range"],.set-row.fixed input[type="color"],.set-row.fixed .switch,.set-row.fixed .btn-mini{cursor:not-allowed;}
 </style>

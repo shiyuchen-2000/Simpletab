@@ -240,7 +240,8 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
 }
 /* 毛玻璃放静态伪元素：主页进入动画已改纯位移（不动 opacity），backdrop 采样进入即就绪 */
 .search-bar::before{
-  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，inset:0 会让背景圆比边框圆小 1px，角上露月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:-1;
   backdrop-filter:blur(22px) saturate(170%);
   -webkit-backdrop-filter:blur(22px) saturate(170%);
   transition:backdrop-filter .4s var(--ease), -webkit-backdrop-filter .4s var(--ease);
@@ -357,7 +358,8 @@ body.clock-pos-left .link-area,body.clock-pos-right .link-area{margin-top:34vh;}
 }
 /* 毛玻璃放静态伪元素，不随 transform 动画，避免 Chromium backdrop-filter 采样残留导致相邻磁贴花屏 */
 .tile::before{
-  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，避免背景与边框间出现月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:-1;
   backdrop-filter:blur(10px) saturate(150%);
   -webkit-backdrop-filter:blur(10px) saturate(150%);
   /* 独立成合成层：隔离弹窗/交互触发的父层重排，规避 backdrop 采样出现的横/竖条纹伪影 */
@@ -442,7 +444,8 @@ body.links-open #gearZone{display:block;animation:zoomIn .45s var(--ease) both;}
   cursor:grab;
 }
 #gearBtn::before{ /* 毛玻璃独立于动画层，避免旋转时重建合成层导致抖动 */
-  content:"";position:absolute;inset:0;border-radius:50%;z-index:-1;
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，避免背景与边框间出现月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:50%;z-index:-1;
   background:var(--glass);
   backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
   transition:background .3s;
@@ -882,3 +885,116 @@ body:not(.links-open) .dock.dock-visible{display:flex;}
 *{scrollbar-width:thin;scrollbar-color:rgba(var(--accent-rgb),.4) transparent;}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 @media (max-width:640px){.tile{width:88px;}.tile .t-ico{width:40px;height:40px;}.seg button{padding:.38rem .6rem;font-size:.8rem;}.dock{gap:10px;padding:9px 12px;border-radius:18px;}.dock-item{width:40px;height:40px;font-size:18px;}}
+
+/* ============================================================
+   Microsoft Fluent 2 风格（html[data-style="fluent"]）
+   第二个维度，与 data-theme 正交：亮/暗两套令牌 + 组件覆盖。
+   材质类设置（玻璃强度/高光/透明度/圆角/光晕/悬浮）在 Fluent 下
+   由此处固定为 Fluent 规范值，故这些设置项在设置面板中置灰。
+   JS 注入的上游变量（--glass-a/--search-alpha/--dock-alpha）优先级
+   高于 CSS，这里直接重定义最终令牌压过；仅 --radius-scale 与
+   --search-radius 两处用 !important（被 JS 内联注入）。
+   ============================================================ */
+
+/* —— Fluent 2 令牌：浅色（Mica 中性底 + Acrylic 填充） —— */
+[data-theme="light"][data-style="fluent"]{
+  --bg-default:linear-gradient(180deg,#f6f6f6 0%,#ededed 100%);
+  --glass:rgba(249,249,249,.9);
+  --glass-strong:rgba(255,255,255,.95);
+  --glass-modal:rgba(255,255,255,.97);
+  --glass-soft:rgba(243,243,243,.65);
+  --glass-border:#EBEBEB;            /* CardStrokeColorDefault 1px 描边 */
+  --glass-topline:transparent;       /* 关闭玻璃顶部反光 */
+  --text:#1B1B1B;
+  --text-dim:rgba(27,27,27,.72);
+  --text-faint:rgba(27,27,27,.52);
+  --placeholder:rgba(27,27,27,.5);
+  --search-bg:rgba(255,255,255,.75);
+  --search-bg-hover:rgba(255,255,255,.85);
+  --search-bg-focus:#FFFFFF;
+  --dock-bg:rgba(249,249,249,.9);
+  --clock-text:#1B1B1B;
+  --clock-grad:none;                 /* 时钟纯色 */
+  --clock-shadow:none;
+  --clock-date:#5D5D5D;
+  --shadow:0 2px 8px rgba(0,0,0,.08);/* Fluent 柔和阴影 */
+  --radius-scale:.421 !important;    /* 8/19 → 磁贴 8px */
+  --search-radius:8px !important;
+}
+
+/* —— Fluent 2 令牌：深色 —— */
+[data-theme="dark"][data-style="fluent"]{
+  --bg-default:linear-gradient(180deg,#202020 0%,#1b1b1b 100%);
+  --glass:rgba(32,32,32,.85);
+  --glass-strong:rgba(45,45,45,.92);
+  --glass-modal:rgba(45,45,45,.94);
+  --glass-soft:rgba(60,60,60,.6);
+  --glass-border:rgba(255,255,255,.12);
+  --glass-topline:transparent;
+  --text:#F2F2F2;
+  --text-dim:rgba(242,242,242,.72);
+  --text-faint:rgba(242,242,242,.5);
+  --placeholder:rgba(242,242,242,.5);
+  --search-bg:rgba(32,32,32,.7);
+  --search-bg-hover:rgba(32,32,32,.8);
+  --search-bg-focus:rgba(45,45,45,.9);
+  --dock-bg:rgba(32,32,32,.85);
+  --clock-text:#F2F2F2;
+  --clock-grad:none;
+  --clock-shadow:none;
+  --clock-date:rgba(242,242,242,.65);
+  --shadow:0 2px 8px rgba(0,0,0,.45);
+  --radius-scale:.421 !important;
+  --search-radius:8px !important;
+}
+
+/* —— Fluent 2 组件覆盖（两种主题通用） —— */
+/* 时钟：纯色。必须重置 background-clip，否则 @supports 的 color:transparent 仍生效 → 文字隐形 */
+[data-style="fluent"] .clock-time{
+  background:none;
+  -webkit-background-clip:initial;
+  background-clip:initial;
+  color:var(--clock-text);
+  text-shadow:none;
+}
+/* 磁贴：1px 描边 + 细阴影，去毛玻璃模糊；悬浮柔和上浮 */
+[data-style="fluent"] .tile{background:var(--glass);border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+[data-style="fluent"] .tile::before{backdrop-filter:none;-webkit-backdrop-filter:none;}
+[data-style="fluent"] .tile:hover{transform:translateY(-2px);background:var(--glass-strong);box-shadow:0 6px 16px rgba(0,0,0,.1);}
+/* 加号磁贴：背景继承 .tile 的不透明填充（var(--glass)），加号用清晰文字色，hover accent 反馈 */
+[data-style="fluent"] .tile.add{box-shadow:none;}
+[data-style="fluent"] .tile.add .plus{color:var(--text-faint);}
+[data-style="fluent"] .tile.add:hover{border-color:var(--accent);background:var(--glass-strong);}
+[data-style="fluent"] .tile.add:hover .plus{color:var(--accent);}
+/* 图标：去光晕投影（iconGlow 在 Fluent 下固定为无） */
+[data-style="fluent"] .tile .t-ico,[data-style="fluent"] .dock-item{box-shadow:none;}
+/* 搜索框：Acrylic 保留但降饱和；圆角由 --search-radius:8px 生效 */
+[data-style="fluent"] .search-bar{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+[data-style="fluent"] .search-bar::before{backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%);}
+/* 齿轮设置按钮：Fluent 图标按钮——方形圆角（毛玻璃下为圆形，跟随风格切换），
+   去毛玻璃模糊，纯色填充，hover accent 淡填充。
+   原规则用 ID 选择器 #gearBtn 特异性更高，此处必须 !important 才能压过 */
+[data-style="fluent"] #gearBtn{border-radius:10px !important;}
+[data-style="fluent"] #gearBtn::before{border-radius:10px !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;background:var(--glass-strong);}
+/* hover 用双层背景叠加：上层 accent 淡色 + 下层不透明填充，保持不透明而非变透明 */
+[data-style="fluent"] #gearBtn:hover::before,[data-style="fluent"] #gearBtn:active::before{
+  background:linear-gradient(rgba(var(--accent-rgb),.12),rgba(var(--accent-rgb),.12)),var(--glass-strong) !important;
+}
+[data-style="fluent"] .engine-pill{border-radius:8px;}
+/* 弹窗：clip-path 与 border-radius 必须成对改（否则 22px 裁剪角仍在），去大投影 */
+[data-style="fluent"] .modal{border-radius:8px;clip-path:none;box-shadow:0 8px 24px rgba(0,0,0,.12);}
+/* 遮罩去模糊 */
+[data-style="fluent"] .modal-backdrop,[data-style="fluent"] .confirm-backdrop,[data-style="fluent"] .folder-backdrop{backdrop-filter:none;-webkit-backdrop-filter:none;}
+/* 浮层统一 8px + 柔和阴影 */
+[data-style="fluent"] .dropdown,[data-style="fluent"] .engine-dropdown,[data-style="fluent"] .fd-dropdown,
+[data-style="fluent"] .context-menu,[data-style="fluent"] .overlay-form,[data-style="fluent"] .confirm-box,
+[data-style="fluent"] .folder-panel,[data-style="fluent"] .tour-bubble,[data-style="fluent"] .toast{border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);}
+[data-style="fluent"] .engine-dropdown .ed-item,[data-style="fluent"] .fd-item{border-radius:6px;}
+[data-style="fluent"] .context-menu button{border-radius:6px;}
+/* 拓展坞 */
+[data-style="fluent"] .dock{border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%);}
+/* 分段控件 Fluent 高亮：选中项 accent 淡填充 + 细描边，替代实心 accent + 大投影。
+   保留 gap 与原 padding，避免按钮紧贴粘连造成错位 */
+[data-style="fluent"] .seg{border-radius:8px;}
+[data-style="fluent"] .seg button{border-radius:6px;}
+[data-style="fluent"] .seg button.on{background:rgba(var(--accent-rgb),.14);color:var(--accent-text);font-weight:600;box-shadow:none;}

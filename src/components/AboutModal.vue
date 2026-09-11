@@ -6,6 +6,14 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.3.0',
+    items: [
+      '新增「Fluent 2」设计风格：Acrylic / Mica 材质、8px 小圆角、1px 描边与柔和阴影，可随时切换',
+      'Fluent 风格沿用当前主题色，材质与质感设置固定为 Fluent 规范值',
+      '毛玻璃保持为默认风格，风格切换即时生效并持久化'
+    ]
+  },
+  {
     ver: 'v1.2.5',
     items: [
       '新增「视频壁纸」：选择本地视频作为新标签页背景，静音循环自动播放',
@@ -133,7 +141,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.2.5</span>
+            <span class="am-chip">v1.3.0</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

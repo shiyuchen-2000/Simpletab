@@ -77,7 +77,7 @@ const DEFAULT_LINKS = [
 const DEFAULT_FOLDERS = [{ id: 'f1', title: '开发工具' }]
 
 const DEFAULTS = {
-  view: 'home', theme: 'dark', hour12: false, showSeconds: false, blink: false,
+  view: 'home', theme: 'dark', style: 'glass', hour12: false, showSeconds: false, blink: false,
   clockFont: 'system-ui', clockColor: null, clockPos: 'top',
   showDate: true, dateFormat: 'cn-long', dateColor: null,
   engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, wallpaperType: null, dockEnabled: true, dockCount: 7,
@@ -90,7 +90,7 @@ const DEFAULTS = {
 
 /* 默认设置快照（用于重置） */
 export const DEFAULT_SETTINGS = {
-  theme: DEFAULTS.theme, hour12: DEFAULTS.hour12, showSeconds: DEFAULTS.showSeconds, blink: DEFAULTS.blink,
+  theme: DEFAULTS.theme, style: DEFAULTS.style, hour12: DEFAULTS.hour12, showSeconds: DEFAULTS.showSeconds, blink: DEFAULTS.blink,
   clockFont: DEFAULTS.clockFont, clockColor: DEFAULTS.clockColor, clockPos: DEFAULTS.clockPos,
   showDate: DEFAULTS.showDate, dateFormat: DEFAULTS.dateFormat, dateColor: DEFAULTS.dateColor,
   engine: DEFAULTS.engine, wallpaper: DEFAULTS.wallpaper, wallpaperType: DEFAULTS.wallpaperType, dockEnabled: DEFAULTS.dockEnabled, dockCount: DEFAULTS.dockCount,
@@ -229,6 +229,7 @@ export async function persistState(state) {
 export function applySaved(saved) {
   Object.assign(state, {
     theme: saved.theme ?? state.theme,
+    style: saved.style ?? state.style,
     hour12: saved.hour12 ?? state.hour12,
     showSeconds: saved.showSeconds ?? state.showSeconds,
     blink: saved.blink ?? state.blink,
@@ -355,6 +356,10 @@ else if (darkMq.addListener) darkMq.addListener(onSystemDarkChange)
 export const resolvedTheme = computed(() => state.theme === 'system' ? (systemDark.value ? 'dark' : 'light') : state.theme)
 watchEffect(() => {
   document.documentElement.dataset.theme = resolvedTheme.value
+})
+/* 风格维度：glass（毛玻璃，默认）/ fluent（Fluent 2），驱动 CSS [data-style] 覆盖块 */
+watchEffect(() => {
+  document.documentElement.dataset.style = state.style === 'fluent' ? 'fluent' : 'glass'
 })
 watchEffect(() => {
   const pos = state.clockPos || 'top'
@@ -830,7 +835,8 @@ watchEffect(() => {
   document.body.classList.toggle('tile-text-hover', state.tileText === 'hover')
   document.body.classList.toggle('tile-text-none', state.tileText === 'none')
   document.body.classList.toggle('no-tile-hover', state.tileHoverLift <= 0)
-  document.body.classList.toggle('glass-shine', !!state.glassShine)
+  /* glass-shine 高光仅毛玻璃风格生效；Fluent 下高光/玻璃投影由 [data-style] 覆盖统一处理 */
+  document.body.classList.toggle('glass-shine', !!state.glassShine && state.style !== 'fluent')
 })
 
 /* 搜索框 / 拓展坞透明度（注入到 html：--search-bg 等 token 定义在 [data-theme] 上） */
@@ -885,7 +891,7 @@ let saveTimer = null
 export function save() {
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => persistState({
-    theme: state.theme, hour12: state.hour12, showSeconds: state.showSeconds, blink: state.blink,
+    theme: state.theme, style: state.style, hour12: state.hour12, showSeconds: state.showSeconds, blink: state.blink,
     clockFont: state.clockFont, clockColor: state.clockColor, clockPos: state.clockPos,
     showDate: state.showDate, dateFormat: state.dateFormat, dateColor: state.dateColor,
     engine: state.engine, engines: state.engines, dockEnabled: state.dockEnabled, dockCount: state.dockCount,
@@ -902,7 +908,7 @@ export function resetSettings() {
   const oldWallpaper = state.wallpaper
   const oldType = state.wallpaperType
   Object.assign(state, {
-    theme: DEFAULT_SETTINGS.theme, hour12: DEFAULT_SETTINGS.hour12,
+    theme: DEFAULT_SETTINGS.theme, style: DEFAULT_SETTINGS.style, hour12: DEFAULT_SETTINGS.hour12,
     showSeconds: DEFAULT_SETTINGS.showSeconds, blink: DEFAULT_SETTINGS.blink,
     clockFont: DEFAULT_SETTINGS.clockFont, clockColor: DEFAULT_SETTINGS.clockColor,
     clockPos: DEFAULT_SETTINGS.clockPos, showDate: DEFAULT_SETTINGS.showDate,
