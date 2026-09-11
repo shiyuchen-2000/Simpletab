@@ -18,6 +18,7 @@ function validate(data) {
 export function exportConfig() {
   const snapshot = JSON.parse(JSON.stringify(state))
   delete snapshot.wallpaper
+  delete snapshot.wallpaperType
   delete snapshot.view
   const payload = { app: APP_TAG, data: { state: snapshot } }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
@@ -35,7 +36,7 @@ export function exportConfig() {
    设置字段按导入文件里实际存在的覆盖（旧版本文件缺字段时保留当前）；links 与 folders 必须成对替换
    （folderId 引用文件夹），因此合并为同一选项。壁纸 / view 永不参与导入。
    成功返回 null，否则返回错误文案 */
-const SKIP_KEYS = ['links', 'folders', 'wallpaper', 'view']
+const SKIP_KEYS = ['links', 'folders', 'wallpaper', 'wallpaperType', 'view']
 export function applyImport(data, opts = { settings: true, links: true }) {
   const err = validate(data)
   if (err) return err

@@ -1,6 +1,6 @@
 <script setup>
-import { computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, dockVisible } from './store'
+import { computed, watch, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, dockVisible, isVideoWallpaper } from './store'
 import ClockView from './components/ClockView.vue'
 import SearchBar from './components/SearchBar.vue'
 import LinkGrid from './components/LinkGrid.vue'
@@ -29,7 +29,31 @@ const homeClasses = computed(() => ({
   'dock-lift': dockVisible()
 }))
 
-const bgStyle = computed(() => state.wallpaper ? { backgroundImage: `url(${state.wallpaper})` } : {})
+const bgStyle = computed(() => {
+  /* 视频壁纸时返回 {}：.bg 的极光渐变自然成为视频加载中的占位背景 */
+  if (!state.wallpaper || isVideoWallpaper.value) return {}
+  return { backgroundImage: `url(${state.wallpaper})` }
+})
+
+/* ---------- 视频壁纸播放控制 ---------- */
+const bgVideo = ref(null)
+const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)')
+const reduceMotion = ref(reduceMq.matches)
+const onReduceChange = e => { reduceMotion.value = e.matches }
+
+/* 播放状态：链接页暂停（blur 作用于静态帧，避免持续模糊运动视频的 GPU 开销）；
+   prefers-reduced-motion 下不播放，只显示首帧静态图 */
+function syncVideoPlayback() {
+  const v = bgVideo.value
+  if (!v) return
+  if (state.view === 'links' || reduceMotion.value) v.pause()
+  else v.play().catch(() => {})
+}
+watch([isVideoWallpaper, () => state.view, reduceMotion], syncVideoPlayback)
+/* 新视频壁纸挂载后 video ref 才就绪，需 nextTick 后再同步一次播放状态 */
+watch(isVideoWallpaper, async on => {
+  if (on) { await nextTick(); syncVideoPlayback() }
+})
 
 /* 视图切换时重播入场动画：视图改为 visibility 常驻（毛玻璃层不重建），
    CSS animation 不会因隐藏/显示重启，需移类 → 强制 reflow → 加类来重触发 */
@@ -110,17 +134,23 @@ onMounted(() => {
   document.addEventListener('contextmenu', onContextMenu)
   document.addEventListener('keydown', onKeydown)
   document.addEventListener('click', onClick)
+  reduceMq.addEventListener?.('change', onReduceChange)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('contextmenu', onContextMenu)
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('click', onClick)
+  reduceMq.removeEventListener?.('change', onReduceChange)
 })
 </script>
 
 <template>
-  <!-- 背景层（默认清新壁纸） -->
+  <!-- 背景层（默认清新壁纸 / 图片 / 视频壁纸） -->
   <div class="bg" id="bg" :style="bgStyle">
+    <video v-if="isVideoWallpaper" ref="bgVideo" class="bg-video"
+      :autoplay="!reduceMotion && state.view === 'home'"
+      muted loop playsinline preload="auto" :src="state.wallpaper"
+      @loadeddata="syncVideoPlayback" @canplay="syncVideoPlayback"></video>
     <div class="bg-dim"></div>
     <div class="bg-vignette"></div>
     <div class="bg-tint"></div>

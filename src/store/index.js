@@ -3,7 +3,7 @@
 // ============================================================
 import { reactive, ref, computed, watch, watchEffect, nextTick } from 'vue'
 import { ensureFavicon, hostOf } from './faviconCache'
-import { loadWallpaperBlob, saveWallpaperBlob, clearWallpaperBlob } from './wallpaperDB'
+import { loadWallpaperBlob, saveWallpaperBlob, clearWallpaperBlob, kindOfBlob } from './wallpaperDB'
 
 /* ---------- 工具 ---------- */
 export const uid = () => Math.random().toString(36).slice(2, 9)
@@ -80,7 +80,7 @@ const DEFAULTS = {
   view: 'home', theme: 'dark', hour12: false, showSeconds: false, blink: false,
   clockFont: 'system-ui', clockColor: null, clockPos: 'top',
   showDate: true, dateFormat: 'cn-long', dateColor: null,
-  engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, dockEnabled: true, dockCount: 7,
+  engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, wallpaperType: null, dockEnabled: true, dockCount: 7,
   accentColor: null,
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true,
@@ -93,7 +93,7 @@ export const DEFAULT_SETTINGS = {
   theme: DEFAULTS.theme, hour12: DEFAULTS.hour12, showSeconds: DEFAULTS.showSeconds, blink: DEFAULTS.blink,
   clockFont: DEFAULTS.clockFont, clockColor: DEFAULTS.clockColor, clockPos: DEFAULTS.clockPos,
   showDate: DEFAULTS.showDate, dateFormat: DEFAULTS.dateFormat, dateColor: DEFAULTS.dateColor,
-  engine: DEFAULTS.engine, wallpaper: DEFAULTS.wallpaper, dockEnabled: DEFAULTS.dockEnabled, dockCount: DEFAULTS.dockCount,
+  engine: DEFAULTS.engine, wallpaper: DEFAULTS.wallpaper, wallpaperType: DEFAULTS.wallpaperType, dockEnabled: DEFAULTS.dockEnabled, dockCount: DEFAULTS.dockCount,
   accentColor: DEFAULTS.accentColor,
   glassStrength: DEFAULTS.glassStrength, cardRadius: DEFAULTS.cardRadius, tileDensity: DEFAULTS.tileDensity, linkOpenIn: DEFAULTS.linkOpenIn, searchRadius: DEFAULTS.searchRadius,
   iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine,
@@ -167,12 +167,14 @@ export async function loadState() {
     const blob = await loadWallpaperBlob()
     if (blob) {
       state.wallpaper = URL.createObjectURL(blob)
+      state.wallpaperType = kindOfBlob(blob)
     } else if (saved && typeof saved.wallpaper === 'string' && saved.wallpaper.startsWith('data:image')) {
       state.wallpaper = saved.wallpaper
+      state.wallpaperType = 'image'
       migrateLegacyWallpaper(saved.wallpaper)
     }
   } catch (e) { /* IDB 不可用不阻塞启动，壁纸显示默认 */ }
-  if (saved) delete saved.wallpaper
+  if (saved) { delete saved.wallpaper; delete saved.wallpaperType }
   /* 首次从云端恢复且本机无壁纸：轻提示，避免"壁纸怎么没了"的困惑 */
   if (fromSync) {
     try {
@@ -193,7 +195,7 @@ async function migrateLegacyWallpaper(dataUrl) {
 }
 export async function persistState(state) {
   // 壁纸已独立存于 IndexedDB，不再进 storage：消除 base64 膨胀与每次保存的全量序列化。
-  const { wallpaper, ...rest } = state
+  const { wallpaper, wallpaperType, ...rest } = state
   const { links = [], folders = [], ...settings } = rest
   const settingsObj = JSON.parse(JSON.stringify(settings))
   const foldersObj = JSON.parse(JSON.stringify(folders))
@@ -239,6 +241,7 @@ export function applySaved(saved) {
     engine: saved.engine ?? state.engine,
     engines: saved.engines ?? state.engines,
     wallpaper: saved.wallpaper ?? state.wallpaper,
+    wallpaperType: saved.wallpaperType ?? state.wallpaperType,
     dockEnabled: saved.dockEnabled ?? state.dockEnabled,
     dockCount: saved.dockCount ?? state.dockCount,
     accentColor: saved.accentColor ?? state.accentColor,
@@ -272,6 +275,9 @@ export async function restoreFromSync() {
 
 /* ---------- 响应式状态 ---------- */
 const state = reactive({ ...JSON.parse(JSON.stringify(DEFAULTS)) })
+
+/* 视频壁纸标记：objectURL 无法反推 mime，靠内存态类型字段判定（来源 Blob.type，加载即自愈） */
+export const isVideoWallpaper = computed(() => !!state.wallpaper && state.wallpaperType === 'video')
 
 // 非持久化 UI 状态
 const ui = reactive({
@@ -894,13 +900,14 @@ export function save() {
 /* ---------- 重置所有设置（保留 links/folders） ---------- */
 export function resetSettings() {
   const oldWallpaper = state.wallpaper
+  const oldType = state.wallpaperType
   Object.assign(state, {
     theme: DEFAULT_SETTINGS.theme, hour12: DEFAULT_SETTINGS.hour12,
     showSeconds: DEFAULT_SETTINGS.showSeconds, blink: DEFAULT_SETTINGS.blink,
     clockFont: DEFAULT_SETTINGS.clockFont, clockColor: DEFAULT_SETTINGS.clockColor,
     clockPos: DEFAULT_SETTINGS.clockPos, showDate: DEFAULT_SETTINGS.showDate,
     dateFormat: DEFAULT_SETTINGS.dateFormat, dateColor: DEFAULT_SETTINGS.dateColor,
-    engine: DEFAULT_SETTINGS.engine, wallpaper: DEFAULT_SETTINGS.wallpaper,
+    engine: DEFAULT_SETTINGS.engine, wallpaper: DEFAULT_SETTINGS.wallpaper, wallpaperType: DEFAULT_SETTINGS.wallpaperType,
     dockEnabled: DEFAULT_SETTINGS.dockEnabled, dockCount: DEFAULT_SETTINGS.dockCount,
     accentColor: DEFAULT_SETTINGS.accentColor,
     glassStrength: DEFAULT_SETTINGS.glassStrength, cardRadius: DEFAULT_SETTINGS.cardRadius, tileDensity: DEFAULT_SETTINGS.tileDensity, linkOpenIn: DEFAULT_SETTINGS.linkOpenIn, searchRadius: DEFAULT_SETTINGS.searchRadius,
@@ -908,9 +915,13 @@ export function resetSettings() {
     wallpaperVignette: DEFAULT_SETTINGS.wallpaperVignette,
     searchOpacity: DEFAULT_SETTINGS.searchOpacity, dockOpacity: DEFAULT_SETTINGS.dockOpacity
   })
-  /* 重置设置同时清掉 IndexedDB 壁纸，并释放本页 objectURL */
+  /* 重置设置同时清掉 IndexedDB 壁纸，并释放本页 objectURL。
+     video 元素正在解码时立即 revoke 会报 Failed to load resource，故延迟 1s 释放 */
   if (oldWallpaper) {
-    if (oldWallpaper.startsWith('blob:')) URL.revokeObjectURL(oldWallpaper)
+    if (oldWallpaper.startsWith('blob:')) {
+      if (oldType === 'video') setTimeout(() => URL.revokeObjectURL(oldWallpaper), 1000)
+      else URL.revokeObjectURL(oldWallpaper)
+    }
     clearWallpaperBlob().catch(() => {})
   }
   ui.searchFilter = ''

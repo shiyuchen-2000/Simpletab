@@ -47,3 +47,7 @@ export function saveWallpaperBlob(blob) {
 export function clearWallpaperBlob() {
   return txn('readwrite', s => s.delete(KEY))
 }
+
+/* Blob → 壁纸类型：视频/图片。type 缺失或未知按图片处理（background-image 可尝试渲染） */
+export const kindOfBlob = blob =>
+  (blob && blob.type && blob.type.startsWith('video/')) ? 'video' : 'image'
