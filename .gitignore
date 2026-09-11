@@ -11,3 +11,6 @@ release/
 # 编辑器 / 本地环境
 .trae/
 .DS_Store
+
+# AI 协作规则（本地使用，不随仓库分发）
+CLAUDE.md
