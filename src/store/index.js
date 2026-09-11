@@ -24,7 +24,8 @@ export const normalizeUrl = v => {
 }
 
 /* ---------- 常量 ---------- */
-export const ENGINES = [
+/* 默认搜索引擎：存于 state.engines（响应式、可增删改），编辑结果同步到搜索框引擎胶囊与下拉 */
+export const DEFAULT_ENGINES = [
   { key: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd={q}' },
   { key: 'bing', name: '必应', url: 'https://www.bing.com/search?q={q}' },
   { key: 'google', name: '谷歌', url: 'https://www.google.com/search?q={q}' },
@@ -79,7 +80,7 @@ const DEFAULTS = {
   view: 'home', theme: 'dark', hour12: false, showSeconds: false, blink: false,
   clockFont: 'system-ui', clockColor: null, clockPos: 'top',
   showDate: true, dateFormat: 'cn-long', dateColor: null,
-  engine: 'baidu', wallpaper: null, dockEnabled: true, dockCount: 7,
+  engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, dockEnabled: true, dockCount: 7,
   accentColor: null,
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true,
@@ -101,7 +102,43 @@ export const DEFAULT_SETTINGS = {
 
 /* ---------- 持久化封装：chrome.storage.local 优先，sync 云端备份，回退 localStorage ---------- */
 const hasChromeStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.local
-const hasSyncStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.sync
+export const hasSyncStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.sync
+/* 云端备份分块：chrome.storage.sync 单条目上限 8KB、总量 100KB，链接多会超单条目写失败，
+   故设置+文件夹一个 key、链接按字节分块存多个 key，容量撑到约 700 链接 */
+const SYNC_BASE_KEY = 'startpage_state'
+const SYNC_LINKS_PREFIX = 'startpage_links_'
+const SYNC_BLOCK_BYTES = 6 * 1024   // 每块 <6KB，留余量防 8KB 单条目超限
+/* 同步用量（字节，响应式），设置里显示 已用 / 100KB */
+export const syncUsage = ref(0)
+export async function refreshSyncUsage() {
+  if (!hasSyncStorage) { syncUsage.value = 0; return }
+  try { syncUsage.value = await chrome.storage.sync.getBytesInUse(null) } catch (e) { syncUsage.value = 0 }
+}
+/* 链接按字节分块，避免单块超 8KB */
+function chunkLinks(links) {
+  const blocks = []
+  let cur = [], size = 0
+  for (const l of links) {
+    const s = JSON.stringify(l).length
+    if (cur.length && size + s > SYNC_BLOCK_BYTES) { blocks.push(cur); cur = []; size = 0 }
+    cur.push(l); size += s
+  }
+  if (cur.length) blocks.push(cur)
+  return blocks
+}
+/* 从 sync 读取完整状态：base（设置+文件夹）+ 链接分块；兼容旧版单 key 内直接含 links 的格式 */
+async function readSyncState() {
+  const got = await chrome.storage.sync.get(null)
+  const base = got[SYNC_BASE_KEY]
+  if (!base) return null
+  if (Array.isArray(base.links)) return base   // 旧格式
+  const links = []
+  const keys = Object.keys(got)
+    .filter(k => k.startsWith(SYNC_LINKS_PREFIX))
+    .sort((a, b) => parseInt(a.slice(SYNC_LINKS_PREFIX.length), 10) - parseInt(b.slice(SYNC_LINKS_PREFIX.length), 10))
+  for (const k of keys) links.push(...(got[k] || []))
+  return { ...base, links }
+}
 export async function loadState() {
   let saved = null
   if (hasChromeStorage) {
@@ -111,10 +148,11 @@ export async function loadState() {
     } catch (e) { /* ignore */ }
   }
   // local 为空（如 Edge 清缓存清了扩展存储）→ 从 sync 云端备份恢复
+  let fromSync = false
   if (!saved && hasSyncStorage) {
     try {
-      const data = await chrome.storage.sync.get('startpage_state')
-      if (data && data.startpage_state) saved = data.startpage_state
+      saved = await readSyncState()
+      if (saved) fromSync = true
     } catch (e) { /* ignore */ }
   }
   if (!saved) {
@@ -135,6 +173,12 @@ export async function loadState() {
     }
   } catch (e) { /* IDB 不可用不阻塞启动，壁纸显示默认 */ }
   if (saved) delete saved.wallpaper
+  /* 首次从云端恢复且本机无壁纸：轻提示，避免"壁纸怎么没了"的困惑 */
+  if (fromSync) {
+    try {
+      if (!(await loadWallpaperBlob())) toast('设置已同步，壁纸需在本机重新选择')
+    } catch (e) { /* ignore */ }
+  }
   return saved
 }
 /* 旧版壁纸以 base64 存于 storage，升级后一次性迁移到 IndexedDB（原始 Blob）。
@@ -149,20 +193,34 @@ async function migrateLegacyWallpaper(dataUrl) {
 }
 export async function persistState(state) {
   // 壁纸已独立存于 IndexedDB，不再进 storage：消除 base64 膨胀与每次保存的全量序列化。
-  // state.wallpaper 只是本页有效的 objectURL，序列化它毫无意义
   const { wallpaper, ...rest } = state
-  const obj = JSON.parse(JSON.stringify(rest))
-  // 本地：完整数据（不含壁纸）；localStorage 仅作为 chrome.storage 不可用/写入失败时的降级
+  const { links = [], folders = [], ...settings } = rest
+  const settingsObj = JSON.parse(JSON.stringify(settings))
+  const foldersObj = JSON.parse(JSON.stringify(folders))
+  const linksArr = JSON.parse(JSON.stringify(links))
+  // 本地：完整数据（设置+文件夹+链接，local 配额大、无单条目限制）；localStorage 仅兜底
+  const localObj = { ...settingsObj, folders: foldersObj, links: linksArr }
   if (hasChromeStorage) {
-    try { await chrome.storage.local.set({ startpage_state: obj }) }
-    catch (e) { try { localStorage.setItem('startpage_state', JSON.stringify(obj)) } catch (err) { /* ignore */ } }
+    try { await chrome.storage.local.set({ startpage_state: localObj }) }
+    catch (e) { try { localStorage.setItem('startpage_state', JSON.stringify(localObj)) } catch (err) { /* ignore */ } }
   } else {
-    try { localStorage.setItem('startpage_state', JSON.stringify(obj)) } catch (e) { /* ignore */ }
+    try { localStorage.setItem('startpage_state', JSON.stringify(localObj)) } catch (e) { /* ignore */ }
   }
-  // 云端备份（sync，跟随账号）：剔除壁纸控制配额，清缓存后可自动恢复
+  // 云端备份（sync，跟随账号）：设置+文件夹一个 key，链接分块，突破 8KB 单条目限制
   if (hasSyncStorage) {
-    const { wallpaper: _w, ...syncObj } = obj
-    try { await chrome.storage.sync.set({ startpage_state: syncObj }) } catch (e) { /* 配额/未同步等异常忽略，本地仍在 */ }
+    try {
+      await chrome.storage.sync.set({ [SYNC_BASE_KEY]: { ...settingsObj, folders: foldersObj } })
+      const all = await chrome.storage.sync.get(null)
+      const oldKeys = Object.keys(all).filter(k => k.startsWith(SYNC_LINKS_PREFIX))
+      if (oldKeys.length) await chrome.storage.sync.remove(oldKeys)
+      const blocks = chunkLinks(linksArr)
+      for (let i = 0; i < blocks.length; i++) {
+        await chrome.storage.sync.set({ [SYNC_LINKS_PREFIX + i]: blocks[i] })
+      }
+      refreshSyncUsage()
+    } catch (e) {
+      toast('云备份已达上限，部分数据仅本机保存', 'err')
+    }
   }
 }
 /* 将已读取的数据合并进响应式 state（缺失字段回落到当前默认） */
@@ -179,6 +237,7 @@ export function applySaved(saved) {
     dateFormat: saved.dateFormat ?? state.dateFormat,
     dateColor: saved.dateColor ?? state.dateColor,
     engine: saved.engine ?? state.engine,
+    engines: saved.engines ?? state.engines,
     wallpaper: saved.wallpaper ?? state.wallpaper,
     dockEnabled: saved.dockEnabled ?? state.dockEnabled,
     dockCount: saved.dockCount ?? state.dockCount,
@@ -205,8 +264,8 @@ export function applySaved(saved) {
 export async function restoreFromSync() {
   if (!hasSyncStorage) return false
   try {
-    const data = await chrome.storage.sync.get('startpage_state')
-    if (data && data.startpage_state) { applySaved(data.startpage_state); return true }
+    const data = await readSyncState()
+    if (data) { applySaved(data); refreshSyncUsage(); return true }
   } catch (e) { /* ignore */ }
   return false
 }
@@ -394,24 +453,42 @@ watchEffect(() => {
 
 /* ---------- 搜索引擎 ---------- */
 export function setEngine(key) {
-  const eng = ENGINES.find(x => x.key === key)
+  const eng = state.engines.find(x => x.key === key)
   if (!eng || eng.key === state.engine) return
   state.engine = eng.key
   save()
   toast('已切换至 ' + eng.name)
 }
 export function cycleEngine() {
-  const i = ENGINES.findIndex(x => x.key === state.engine)
-  setEngine(ENGINES[(i + 1) % ENGINES.length].key)
+  const list = state.engines
+  if (!list.length) return
+  const i = list.findIndex(x => x.key === state.engine)
+  setEngine(list[(i + 1) % list.length].key)
   ui.flip = true
   setTimeout(() => { ui.flip = false }, 500)
 }
 export function doSearch() {
   const q = ui.searchQuery.trim()
   if (!q) return
-  const eng = ENGINES.find(x => x.key === state.engine)
+  const eng = state.engines.find(x => x.key === state.engine)
   if (!eng) return
   window.open(eng.url.replace('{q}', encodeURIComponent(q)), '_self')
+}
+/* 引擎增删改：编辑结果即时反映到搜索框引擎胶囊与下拉 */
+export function addEngine(name, url) {
+  const key = uid()
+  state.engines.push({ key, name, url })
+  save()
+  return key
+}
+export function updateEngine(key, name, url) {
+  const e = state.engines.find(x => x.key === key)
+  if (e) { e.name = name; e.url = url; save() }
+}
+export function deleteEngine(key) {
+  state.engines = state.engines.filter(x => x.key !== key)
+  if (state.engine === key) state.engine = state.engines[0]?.key || ''
+  save()
 }
 
 /* ---------- 视图切换 ---------- */
@@ -805,7 +882,7 @@ export function save() {
     theme: state.theme, hour12: state.hour12, showSeconds: state.showSeconds, blink: state.blink,
     clockFont: state.clockFont, clockColor: state.clockColor, clockPos: state.clockPos,
     showDate: state.showDate, dateFormat: state.dateFormat, dateColor: state.dateColor,
-    engine: state.engine, dockEnabled: state.dockEnabled, dockCount: state.dockCount,
+    engine: state.engine, engines: state.engines, dockEnabled: state.dockEnabled, dockCount: state.dockCount,
     accentColor: state.accentColor,
     glassStrength: state.glassStrength, cardRadius: state.cardRadius, tileDensity: state.tileDensity, linkOpenIn: state.linkOpenIn, searchRadius: state.searchRadius,
     iconShape: state.iconShape, iconSize: state.iconSize, iconGlow: state.iconGlow, tileHoverLift: state.tileHoverLift, tileText: state.tileText, glassShine: state.glassShine,

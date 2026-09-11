@@ -1,11 +1,11 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { state, ui, ENGINES, setEngine, cycleEngine, doSearch } from '../store'
+import { state, ui, setEngine, cycleEngine, doSearch } from '../store'
 
 const engineOpen = ref(false)
 const engineClosing = ref(false)
 let closeTimer = null
-const engineName = computed(() => (ENGINES.find(x => x.key === state.engine) || {}).name)
+const engineName = computed(() => (state.engines.find(x => x.key === state.engine) || {}).name)
 const pillClass = computed(() => ({ flip: ui.flip, open: engineOpen.value }))
 const barClass = computed(() => ({ 'has-text': !!ui.searchQuery }))
 
@@ -64,7 +64,7 @@ onBeforeUnmount(() => {
         </span>
       </button>
       <div class="engine-dropdown" :class="{ closing: engineClosing }" v-if="engineOpen || engineClosing">
-        <button v-for="e in ENGINES" :key="e.key" class="ed-item" :class="{ on: e.key === state.engine }" @click.stop="selectEngine(e.key)">
+        <button v-for="e in state.engines" :key="e.key" class="ed-item" :class="{ on: e.key === state.engine }" @click.stop="selectEngine(e.key)">
           <span class="ed-name">{{ e.name }}</span>
           <span class="ed-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
         </button>

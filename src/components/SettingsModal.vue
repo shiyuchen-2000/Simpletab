@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, ENGINES, resolvedTheme } from '../store'
+import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme } from '../store'
 import { useGearModal } from '../store/useGearModal'
 
 /* 每个设置行的标签与描述，用于搜索过滤。分组按「改哪块」分区，实时预览固定顶部不在此列 */
@@ -123,7 +123,7 @@ function setAccentColor(c) {
 function resetAccentColor() { state.accentColor = null; save(); toast('已恢复默认主题色') }
 
 /* 布局微调：毛玻璃强度 / 卡片圆角 / 卡片密度 */
-const engineName = computed(() => (ENGINES.find(x => x.key === state.engine) || {}).name || '搜索')
+const engineName = computed(() => (state.engines.find(x => x.key === state.engine) || {}).name || '搜索')
 const glassVal = computed(() => state.glassStrength ?? 0.5)
 const radiusVal = computed(() => state.cardRadius ?? 19)
 const searchRadiusVal = computed(() => state.searchRadius ?? 29)

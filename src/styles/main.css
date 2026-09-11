@@ -299,6 +299,12 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
 .engine-dropdown .ed-item .ed-check{color:var(--accent-text);font-weight:700;visibility:hidden;}
 .engine-dropdown .ed-item.on{color:var(--accent-text);}
 .engine-dropdown .ed-item.on .ed-check{visibility:visible;}
+/* 引擎名称气泡自适应宽度：胶囊随名称撑宽（受搜索框约束，超长省略）；
+   下拉项名称超长换行不截断，下拉整体自适应宽度 */
+.engine-pill{max-width:min(200px,36vw);white-space:nowrap;}
+.engine-pill > span:first-child{overflow:hidden;text-overflow:ellipsis;}
+.engine-dropdown{max-width:min(280px,78vw);}
+.engine-dropdown .ed-item .ed-name{white-space:normal;word-break:break-word;text-align:left;line-height:1.35;}
 
 /* ============ 快捷链接页 ============ */
 #linksSection{width:100%;max-width:1180px;margin:0 auto;padding:0 4vw;display:flex;flex-direction:column;align-items:center;}
@@ -652,6 +658,41 @@ input[type="color"]{width:36px;height:36px;border:1px solid var(--glass-border);
 .dm-desc b{color:var(--text);}
 .dm-actions{display:flex;gap:.65rem;flex-wrap:wrap;}
 .dm-err{font-size:.84rem;color:#ff7a84;margin:.6rem 0 0;}
+/* 同步状态 + 用量进度条（数据管理页） */
+.sync-status-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;font-size:.88rem;margin-bottom:.6rem;}
+.sync-status-row .sync-ok{color:var(--accent-text);font-weight:600;}
+.sync-meter{height:8px;border-radius:99px;background:var(--glass-soft);border:1px solid var(--glass-border);overflow:hidden;}
+.sync-meter-bar{height:100%;border-radius:99px;background:var(--accent);transition:width .3s var(--ease);}
+.sync-meter-bar.warn{background:#ff7a84;}
+.sync-meter-label{font-size:.76rem;color:var(--text-faint);margin-top:.35rem;text-align:right;font-variant-numeric:tabular-nums;}
+/* 搜索引擎偏好（管理弹窗） */
+.se-list{max-height:240px;overflow-y:auto;margin-bottom:1rem;display:flex;flex-direction:column;gap:.4rem;padding-right:4px;}
+.se-item{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:.5rem .65rem;border-radius:10px;background:var(--glass-soft);border:1px solid var(--glass-border);cursor:grab;}
+.se-item.dragging{opacity:.4;cursor:grabbing;}
+.se-grip{flex:none;display:flex;align-items:center;color:var(--text-faint);cursor:grab;padding:2px 0;}
+.se-item.dragging .se-grip{cursor:grabbing;}
+.se-templates{margin-bottom:.6rem;}
+.se-t-label{font-size:.74rem;color:var(--text-faint);margin-bottom:.4rem;display:block;}
+.se-t-list{display:flex;flex-wrap:wrap;gap:.4rem;}
+/* 拖拽定位提示：目标行高亮 + 插入线（鼠标在上半/下半 → 线在目标上/下） */
+.se-item.drag-over{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
+.se-item.drag-over::before,.se-item.drag-over::after{content:"";position:absolute;left:6px;right:6px;height:2px;border-radius:2px;background:var(--accent);opacity:0;}
+.se-item.drag-over.before::before{top:-3px;opacity:1;}
+.se-item.drag-over.after::after{bottom:-3px;opacity:1;}
+.se-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.se-name{font-size:.9rem;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3;}
+.se-name.on{color:var(--accent-text);}
+.se-url{font-size:.74rem;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.se-actions{flex:none;display:flex;gap:.4rem;}
+.se-del:hover{background:rgba(231,76,86,.18);color:#ff7a84;}
+.se-add-btn{width:100%;justify-content:center;margin-bottom:.7rem;}
+/* 就地编辑：行内文本变输入框（纵向，与 se-info 布局一致，不额外弹出） */
+.se-item.editing{flex-direction:column;align-items:stretch;}
+.se-item.editing .se-actions{justify-content:flex-end;}
+.se-input{width:100%;padding:.45rem .6rem;border-radius:8px;font-size:.88rem;background:var(--glass-soft);border:1px solid var(--glass-border);outline:none;transition:border-color .2s;}
+.se-input:focus{border-color:var(--accent);}
+.se-err{font-size:.76rem;color:#ff7a84;min-height:1em;margin:.4rem 0 0;}
+.se-del-hint{font-size:.76rem;color:#ff7a84;white-space:nowrap;}
 .dm-confirm{margin-top:1rem;padding:.95rem 1.05rem;border-radius:14px;background:var(--glass-soft);border:1px solid var(--glass-border);animation:modalIn .2s var(--ease) both;}
 .dm-confirm-title{font-size:.9rem;font-weight:600;margin-bottom:.35rem;}
 .dm-confirm-desc{font-size:.82rem;color:var(--text-dim);line-height:1.55;margin-bottom:.85rem;}

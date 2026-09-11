@@ -8,6 +8,7 @@ import SettingsGear from './components/SettingsGear.vue'
 import SettingsModal from './components/SettingsModal.vue'
 import WallpaperModal from './components/WallpaperModal.vue'
 import DataModal from './components/DataModal.vue'
+import SearchEngineModal from './components/SearchEngineModal.vue'
 import AboutModal from './components/AboutModal.vue'
 import LinkForm from './components/LinkForm.vue'
 import ContextMenu from './components/ContextMenu.vue'
@@ -150,6 +151,7 @@ onBeforeUnmount(() => {
   <SettingsModal />
   <WallpaperModal />
   <DataModal />
+  <SearchEngineModal />
   <AboutModal />
   <!-- 添加上拉框 -->
   <LinkForm />

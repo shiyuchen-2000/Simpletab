@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { ui, save, toast } from '../store'
+import { ref, computed, watch } from 'vue'
+import { ui, save, toast, hasSyncStorage, syncUsage, refreshSyncUsage } from '../store'
 import { exportConfig, applyImport, loadFromSync } from '../store/backup'
 import { useGearModal } from '../store/useGearModal'
 
@@ -56,6 +56,12 @@ function cancelApply() { pending.value = null }
 
 /* ---------- 从设置按钮弹出 / 落回 ---------- */
 const { modalRef, modalOrigin, closing, closeModal } = useGearModal('data')
+
+/* 同步状态 / 用量进度：打开数据管理时刷新；100KB 配额按字节换算百分比（bytes / 1024 = %） */
+watch(() => ui.modal, v => { if (v === 'data') refreshSyncUsage() })
+const syncKb = computed(() => (syncUsage.value / 1024).toFixed(1))
+const syncPct = computed(() => Math.min(100, syncUsage.value / 1024))
+const syncWarn = computed(() => syncPct.value >= 90)
 </script>
 
 <template>
@@ -85,6 +91,14 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('data')
       <div class="dm-sec">
         <div class="dm-sec-title">云端同步</div>
         <p class="dm-desc">跟随浏览器账号自动备份设置与链接（不含壁纸）。以下可手动推送当前配置到云端，或从云端拉取覆盖本机。</p>
+        <div class="sync-status-row">
+          <span>同步状态</span>
+          <span :class="{ 'sync-ok': hasSyncStorage }">{{ hasSyncStorage ? '已通过浏览器账号同步' : '未登录浏览器账号，仅本机保存' }}</span>
+        </div>
+        <div class="sync-meter">
+          <div class="sync-meter-bar" :class="{ warn: syncWarn }" :style="{ width: (hasSyncStorage ? syncPct : 0) + '%' }"></div>
+        </div>
+        <div class="sync-meter-label">{{ hasSyncStorage ? syncKb + ' KB / 100 KB（' + Math.round(syncPct) + '%）' : '仅本机保存，不占用云端空间' }}</div>
         <div class="dm-actions">
           <button class="btn btn-ghost" @click="onPush">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>

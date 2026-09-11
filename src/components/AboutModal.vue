@@ -6,6 +6,14 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.2.4',
+    items: [
+      '新增「搜索引擎偏好」：支持增删改、拖拽排序、常用模板一键填入，编辑实时同步搜索框引擎胶囊与下拉',
+      '数据同步升级：链接改为分块存储，突破单条 8KB 限制，云备份容量提升至约 700 个链接',
+      '数据管理新增同步状态与同步用量进度条，云备份超限自动降级并提示'
+    ]
+  },
+  {
     ver: 'v1.2.3',
     items: [
       '新增「极光」默认壁纸：网格渐变质感，亮 / 暗主题自动适配',
@@ -116,7 +124,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.2.3</span>
+            <span class="am-chip">v1.2.4</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

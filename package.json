@@ -1,6 +1,6 @@
 {
   "name": "startpage-extension",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "浏览器起始页插件（Vue3 + Vite + Manifest V3）",
   "type": "module",

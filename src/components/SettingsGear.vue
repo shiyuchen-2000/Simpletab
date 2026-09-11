@@ -74,6 +74,13 @@ function openPanel(name) {
       </span>
       壁纸偏好
     </button>
+    <button class="d-item" @click="openPanel('engine')">
+      <span class="di">
+        <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <svg class="di-b" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </span>
+      搜索引擎偏好
+    </button>
     <button class="d-item" @click="openPanel('data')">
       <span class="di">
         <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
@@ -81,6 +88,7 @@ function openPanel(name) {
       </span>
       数据管理
     </button>
+    <div class="d-sep"></div>
     <button class="d-item" @click="startTour">
       <span class="di">
         <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
@@ -88,7 +96,6 @@ function openPanel(name) {
       </span>
       新手指引
     </button>
-    <div class="d-sep"></div>
     <button class="d-item" @click="openPanel('about')">
       <span class="di">
         <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 12v5"/></svg>
