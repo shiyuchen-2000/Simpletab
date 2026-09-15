@@ -7,7 +7,7 @@ import { loadWallpaperBlob, saveWallpaperBlob, clearWallpaperBlob, kindOfBlob } 
 
 /* ---------- 工具 ---------- */
 export const uid = () => Math.random().toString(36).slice(2, 9)
-export const letterOf = title => (title || '?').trim().charAt(0).toUpperCase() || '?'
+export const letterOf = title => String(title || '').trim().charAt(0).toUpperCase() || '?'
 export function fontStack(f) {
   if (['system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy'].includes(f)) return f
   return '"' + f + '",system-ui,sans-serif'
@@ -83,8 +83,8 @@ const DEFAULTS = {
   engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, wallpaperType: null, dockEnabled: true, dockCount: 7,
   accentColor: null,
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
-  iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true,
-  wallpaperVignette: true, searchOpacity: 0.82, dockOpacity: 0.72,
+  iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true, tileEnter: 'drop', folderAnim: 'flip',
+  wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', dockOpacity: 0.72,
   links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS
 }
 
@@ -96,8 +96,8 @@ export const DEFAULT_SETTINGS = {
   engine: DEFAULTS.engine, wallpaper: DEFAULTS.wallpaper, wallpaperType: DEFAULTS.wallpaperType, dockEnabled: DEFAULTS.dockEnabled, dockCount: DEFAULTS.dockCount,
   accentColor: DEFAULTS.accentColor,
   glassStrength: DEFAULTS.glassStrength, cardRadius: DEFAULTS.cardRadius, tileDensity: DEFAULTS.tileDensity, linkOpenIn: DEFAULTS.linkOpenIn, searchRadius: DEFAULTS.searchRadius,
-  iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine,
-  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, dockOpacity: DEFAULTS.dockOpacity
+  iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine, tileEnter: DEFAULTS.tileEnter, folderAnim: DEFAULTS.folderAnim,
+  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, dockOpacity: DEFAULTS.dockOpacity
 }
 
 /* ---------- 持久化封装：chrome.storage.local 优先，sync 云端备份，回退 localStorage ---------- */
@@ -269,8 +269,11 @@ export function applySaved(saved) {
     tileHoverLift: saved.tileHoverLift ?? state.tileHoverLift,
     tileText: saved.tileText ?? state.tileText,
     glassShine: saved.glassShine ?? state.glassShine,
+    tileEnter: saved.tileEnter ?? state.tileEnter,
+    folderAnim: saved.folderAnim ?? state.folderAnim,
     wallpaperVignette: saved.wallpaperVignette ?? state.wallpaperVignette,
     searchOpacity: saved.searchOpacity ?? state.searchOpacity,
+    searchAnim: saved.searchAnim ?? state.searchAnim,
     dockOpacity: saved.dockOpacity ?? state.dockOpacity,
     links: saved.links ?? state.links,
     folders: saved.folders ?? state.folders
@@ -296,6 +299,7 @@ export const isVideoWallpaper = computed(() => !!state.wallpaper && state.wallpa
 const ui = reactive({
   now: new Date(),
   homeLeaving: false,
+  linksLeaving: false,
   dropdownOpen: false,
   modal: null,                 // 'settings' | 'wallpaper' | 'about' | null
   searchQuery: '',
@@ -372,6 +376,18 @@ watchEffect(() => {
 /* 风格维度：glass（毛玻璃，默认）/ fluent（Fluent 2），驱动 CSS [data-style] 覆盖块 */
 watchEffect(() => {
   document.documentElement.dataset.style = state.style === 'fluent' ? 'fluent' : 'glass'
+})
+/* 搜索框动画维度：none / sink（沉入）/ lift（浮升），驱动 CSS [data-search-anim] */
+watchEffect(() => {
+  document.documentElement.dataset.searchAnim = state.searchAnim || 'none'
+})
+/* 磁贴入场动画：fade（整体淡入）/ drop（依次落位），驱动 CSS [data-tile-enter] */
+watchEffect(() => {
+  document.documentElement.dataset.tileEnter = state.tileEnter === 'drop' ? 'drop' : 'fade'
+})
+/* 文件夹展开动画：normal（缩放）/ flip（3D 翻转），驱动 CSS [data-folder-anim] */
+watchEffect(() => {
+  document.documentElement.dataset.folderAnim = state.folderAnim === 'flip' ? 'flip' : 'normal'
 })
 watchEffect(() => {
   const pos = state.clockPos || 'top'
@@ -495,6 +511,8 @@ export function doSearch() {
   if (!q) return
   const eng = state.engines.find(x => x.key === state.engine)
   if (!eng) return
+  /* 协议白名单：引擎 url 可能来自导入/同步的不可信数据，拒绝非 http/https（H1） */
+  if (!/^https?:\/\//i.test(eng.url)) return
   window.open(eng.url.replace('{q}', encodeURIComponent(q)), '_self')
 }
 /* 引擎增删改：编辑结果即时反映到搜索框引擎胶囊与下拉 */
@@ -517,6 +535,24 @@ export function deleteEngine(key) {
 /* ---------- 视图切换 ---------- */
 export function setView(v) {
   if (state.view === v) return
+  if (v === 'home' && state.view === 'links' && !ui.linksLeaving && state.tileEnter === 'drop') {
+    /* 离开链接页且磁贴为落位模式：先播磁贴依次收起动画（linksLeaving），
+       结束后再切视图，避免磁贴瞬间隐藏而生硬。
+       先立即关掉弹层/下拉（否则收起动画期间设置下拉还开着，观感割裂），
+       同时移除 linksSection 的 view-enter（入场动画类）——否则落位动画特异性
+       高于收起动画，收起会被入场动画覆盖而失效 */
+    ui.linksLeaving = true
+    closeAllPopups()
+    closeFolder()
+    document.getElementById('linksSection')?.classList.remove('view-enter')
+    setTimeout(() => {
+      ui.linksLeaving = false
+      state.view = 'home'
+      ui.homeLeaving = false
+      save()
+    }, 560)
+    return
+  }
   state.view = v
   closeAllPopups()
   closeFolder()
@@ -815,8 +851,10 @@ export function moveOutFolder(id) {
     save(); toast('已移出文件夹')
   }
 }
-/* 打开链接：按设置决定新标签页 / 当前页 */
+/* 打开链接：按设置决定新标签页 / 当前页。
+   协议白名单：链接 url 可能来自导入/同步的不可信数据，拒绝非 http/https（H1） */
 export function openLinkUrl(url) {
+  if (!/^https?:\/\//i.test(url)) return
   window.open(url, state.linkOpenIn === 'self' ? '_self' : '_blank')
 }
 export function deleteLink(id) {
@@ -830,9 +868,11 @@ export const dockVisible = () => {
   return state.dockEnabled && list.length > 0 && state.view === 'home'
 }
 
-/* body 状态类同步（links-open / dock-visible） */
+/* body 状态类同步（links-open / dock-visible / links-leaving / tour-active） */
 watchEffect(() => {
   document.body.classList.toggle('links-open', state.view === 'links')
+  document.body.classList.toggle('links-leaving', ui.linksLeaving)
+  document.body.classList.toggle('tour-active', ui.tourActive)
   const visible = dockVisible()
   document.body.classList.toggle('dock-visible', visible)
 })
@@ -900,19 +940,36 @@ export async function loadFonts() {
 
 /* ---------- 持久化触发 ---------- */
 let saveTimer = null
-export function save() {
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => persistState({
+function buildSnapshot() {
+  return {
     theme: state.theme, style: state.style, hour12: state.hour12, showSeconds: state.showSeconds, blink: state.blink,
     clockFont: state.clockFont, clockColor: state.clockColor, clockPos: state.clockPos,
     showDate: state.showDate, dateFormat: state.dateFormat, dateColor: state.dateColor,
     engine: state.engine, engines: state.engines, dockEnabled: state.dockEnabled, dockCount: state.dockCount,
     accentColor: state.accentColor,
     glassStrength: state.glassStrength, cardRadius: state.cardRadius, tileDensity: state.tileDensity, linkOpenIn: state.linkOpenIn, searchRadius: state.searchRadius,
-    iconShape: state.iconShape, iconSize: state.iconSize, iconGlow: state.iconGlow, tileHoverLift: state.tileHoverLift, tileText: state.tileText, glassShine: state.glassShine,
-    wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, dockOpacity: state.dockOpacity,
+    iconShape: state.iconShape, iconSize: state.iconSize, iconGlow: state.iconGlow, tileHoverLift: state.tileHoverLift, tileText: state.tileText, glassShine: state.glassShine, tileEnter: state.tileEnter, folderAnim: state.folderAnim,
+    wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, searchAnim: state.searchAnim, dockOpacity: state.dockOpacity,
     links: state.links, folders: state.folders
-  }), 120)
+  }
+}
+export function save() {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => persistState(buildSnapshot()), 120)
+}
+/* 页面隐藏/关闭时立即落盘：newtab 页生命周期短，防抖期间关闭标签页会丢最近改动（H3）。
+   仅当存在未保存的防抖定时器时才 flush，避免每次隐藏都重复全量写入 */
+function flushSave() {
+  if (!saveTimer) return
+  clearTimeout(saveTimer)
+  saveTimer = null
+  persistState(buildSnapshot())
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushSave)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSave()
+  })
 }
 
 /* ---------- 重置所有设置（保留 links/folders） ---------- */
@@ -929,9 +986,9 @@ export function resetSettings() {
     dockEnabled: DEFAULT_SETTINGS.dockEnabled, dockCount: DEFAULT_SETTINGS.dockCount,
     accentColor: DEFAULT_SETTINGS.accentColor,
     glassStrength: DEFAULT_SETTINGS.glassStrength, cardRadius: DEFAULT_SETTINGS.cardRadius, tileDensity: DEFAULT_SETTINGS.tileDensity, linkOpenIn: DEFAULT_SETTINGS.linkOpenIn, searchRadius: DEFAULT_SETTINGS.searchRadius,
-    iconShape: DEFAULT_SETTINGS.iconShape, iconSize: DEFAULT_SETTINGS.iconSize, iconGlow: DEFAULT_SETTINGS.iconGlow, tileHoverLift: DEFAULT_SETTINGS.tileHoverLift, tileText: DEFAULT_SETTINGS.tileText, glassShine: DEFAULT_SETTINGS.glassShine,
+    iconShape: DEFAULT_SETTINGS.iconShape, iconSize: DEFAULT_SETTINGS.iconSize, iconGlow: DEFAULT_SETTINGS.iconGlow, tileHoverLift: DEFAULT_SETTINGS.tileHoverLift, tileText: DEFAULT_SETTINGS.tileText, glassShine: DEFAULT_SETTINGS.glassShine, tileEnter: DEFAULT_SETTINGS.tileEnter, folderAnim: DEFAULT_SETTINGS.folderAnim,
     wallpaperVignette: DEFAULT_SETTINGS.wallpaperVignette,
-    searchOpacity: DEFAULT_SETTINGS.searchOpacity, dockOpacity: DEFAULT_SETTINGS.dockOpacity
+    searchOpacity: DEFAULT_SETTINGS.searchOpacity, searchAnim: DEFAULT_SETTINGS.searchAnim, dockOpacity: DEFAULT_SETTINGS.dockOpacity
   })
   /* 重置设置同时清掉 IndexedDB 壁纸，并释放本页 objectURL。
      video 元素正在解码时立即 revoke 会报 Failed to load resource，故延迟 1s 释放 */

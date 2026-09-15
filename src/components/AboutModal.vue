@@ -6,6 +6,20 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.4.0',
+    items: [
+      '新增「搜索框动画」：无 / 沉入 / 浮升三种 3D 动效，聚焦时 Z 轴位移 + 主题色辉光',
+      '新增「磁贴入场动画」：进入链接页整体淡入 / 依次落位，离开时反向收起',
+      '新增「文件夹展开动画」：打开文件夹正常缩放 / 3D 翻转',
+      '新增「外观预设」：纯净 / 质感 / 现代 / 灵动，一键应用整套外观',
+      '修复：视图切换动画失效（v1.2.4 遗留，入场类被 Vue class patch 覆盖）',
+      '修复：favicon 国内多源适配与高清图标（favicon.im / gstatic.cn / yandex）',
+      '修复：云端同步改手动快照模式，从云端恢复真正生效',
+      '安全：导入 / 同步数据协议白名单与逐条结构校验，拒绝 javascript: 注入与畸形条目',
+      '安全：页面隐藏 / 关闭时立即落盘，避免防抖期间丢数据'
+    ]
+  },
+  {
     ver: 'v1.3.0',
     items: [
       '新增「Fluent 2」设计风格：Acrylic / Mica 材质、8px 小圆角、1px 描边与柔和阴影，可随时切换',
@@ -141,7 +155,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.3.0</span>
+            <span class="am-chip">v1.4.0</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

@@ -56,10 +56,13 @@ watch(isVideoWallpaper, async on => {
 })
 
 /* 视图切换时重播入场动画：视图改为 visibility 常驻（毛玻璃层不重建），
-   CSS animation 不会因隐藏/显示重启，需移类 → 强制 reflow → 加类来重触发 */
-watch(() => state.view, v => {
+   CSS animation 不会因隐藏/显示重启，需移类 → 强制 reflow → 加类来重触发。
+   先 await nextTick：linksSection 的 :class="{ hidden: ... }" 在本轮渲染会用 el.className 覆盖手动加的类，
+   不加 nextTick 的话 view-enter 刚加上就被覆盖，视图动画（含磁贴落位）永远不会生效 */
+watch(() => state.view, async v => {
   const el = document.getElementById(v === 'links' ? 'linksSection' : 'homeSection')
   if (!el) return
+  await nextTick()
   el.classList.remove('view-enter')
   void el.offsetWidth
   el.classList.add('view-enter')

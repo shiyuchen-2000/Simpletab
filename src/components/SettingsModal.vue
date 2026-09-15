@@ -45,14 +45,17 @@ const GROUPS = computed(() => [
       { id: 'iconGlow', title: '图标光晕', desc: '图标底部光晕的强弱', keywords: ['图标光晕', '光晕', '阴影', '发光', 'glow'] },
       { id: 'tileText', title: '磁贴名称', desc: '始终显示 / 悬浮显示 / 不显示', keywords: ['磁贴名称', '名称', '文字', '隐藏', 'label', 'text'] },
       { id: 'tileHover', title: '悬浮动效', desc: '磁贴悬停上浮距离，调为 0 关闭', keywords: ['悬浮动效', '悬浮', '上浮', 'hover', '动效', '动画'] },
-      { id: 'openIn', title: '打开方式', desc: '点击链接时在新标签页或当前页打开', keywords: ['打开方式', '新标签页', '当前页', '新开', 'open', 'tab'] }
+      { id: 'openIn', title: '打开方式', desc: '点击链接时在新标签页或当前页打开', keywords: ['打开方式', '新标签页', '当前页', '新开', 'open', 'tab'] },
+      { id: 'tileEnter', title: '磁贴入场动画', desc: '进入链接页：整体淡入 / 依次落位', keywords: ['磁贴入场', '入场', '动画', '落位', '淡入', 'enter', 'tile'] },
+      { id: 'folderAnim', title: '文件夹展开动画', desc: '打开文件夹：正常缩放 / 3D 翻转', keywords: ['文件夹', '展开', '动画', '翻转', '缩放', 'folder', 'anim'] }
     ]
   },
   {
     label: '搜索框',
     rows: [
       { id: 'searchOpacity', title: '搜索框透明度', desc: '调节搜索框背景的透明程度', keywords: ['搜索框透明度', '搜索框', '透明度', 'search', 'opacity'] },
-      { id: 'searchRadius', title: '搜索框圆角', desc: '胶囊(29px)到方形(10px)之间调节，实时预览', keywords: ['搜索框圆角', '搜索框', '圆角', 'radius', '胶囊', '方形'] }
+      { id: 'searchRadius', title: '搜索框圆角', desc: '胶囊(29px)到方形(10px)之间调节，实时预览', keywords: ['搜索框圆角', '搜索框', '圆角', 'radius', '胶囊', '方形'] },
+      { id: 'searchAnim', title: '搜索框动画', desc: '聚焦时的 3D 动效：无 / 沉入 / 浮升', keywords: ['搜索框动画', '动画', '3D', '沉入', '浮升', '动效', '效果', 'search', 'anim'] }
     ]
   },
   {
@@ -71,6 +74,54 @@ const keywordMatch = (row, q) => {
 }
 /* 常用项 = 颜色 + 布局；其余样式 / 行为设置归入「个性化」，点按钮展开 */
 const BASIC_ROWS = new Set(['theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'pos', 'density', 'iconSize'])
+/* 外观预设：一键应用整套外观（不涉及链接/文件夹），应用后仍可展开逐项细调 */
+const PRESETS = [
+  {
+    id: 'pure', name: '纯净', desc: '克制安静 · 跟随系统 · 低动效',
+    settings: {
+      theme: 'system', style: 'glass', accentColor: null,
+      glassStrength: null, glassShine: true, cardRadius: null,
+      tileDensity: 'comfort', searchRadius: null, searchOpacity: 0.82, dockOpacity: 0.72,
+      iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always',
+      searchAnim: 'none', tileEnter: 'fade', folderAnim: 'normal'
+    }
+  },
+  {
+    id: 'glass', name: '质感', desc: '毛玻璃通透 · 圆润柔和',
+    settings: {
+      theme: 'dark', style: 'glass', accentColor: null,
+      glassStrength: 0.45, glassShine: true, cardRadius: 24,
+      tileDensity: 'comfort', searchRadius: 29, searchOpacity: 0.75, dockOpacity: 0.65,
+      iconShape: 'rounded', iconSize: null, iconGlow: 60, tileHoverLift: 6, tileText: 'always',
+      searchAnim: 'sink', tileEnter: 'drop', folderAnim: 'flip'
+    }
+  },
+  {
+    id: 'fluent', name: '现代', desc: 'Fluent 2 简洁 · 3D 动效',
+    settings: {
+      theme: 'dark', style: 'fluent', accentColor: null,
+      glassStrength: null, glassShine: true, cardRadius: null,
+      tileDensity: 'comfort', searchRadius: null, searchOpacity: 0.82, dockOpacity: 0.72,
+      iconShape: 'rounded', iconSize: null, iconGlow: 40, tileHoverLift: 4, tileText: 'always',
+      searchAnim: 'lift', tileEnter: 'drop', folderAnim: 'flip'
+    }
+  },
+  {
+    id: 'vivid', name: '灵动', desc: '动效全开 · 活泼有光',
+    settings: {
+      theme: 'dark', style: 'glass', accentColor: null,
+      glassStrength: 0.4, glassShine: true, cardRadius: 28,
+      tileDensity: 'spacious', searchRadius: 24, searchOpacity: 0.7, dockOpacity: 0.6,
+      iconShape: 'squircle', iconSize: null, iconGlow: 80, tileHoverLift: 9, tileText: 'always',
+      searchAnim: 'sink', tileEnter: 'drop', folderAnim: 'flip'
+    }
+  }
+]
+function applyPreset(p) {
+  Object.assign(state, p.settings)
+  save()
+  toast('已应用「' + p.name + '」外观预设')
+}
 let initPersonalized = false
 try { initPersonalized = localStorage.getItem('simpletab_personalized') === '1' } catch (e) { /* ignore */ }
 const showPersonalized = ref(initPersonalized)
@@ -132,10 +183,16 @@ const engineName = computed(() => (state.engines.find(x => x.key === state.engin
 const glassVal = computed(() => state.glassStrength ?? 0.5)
 const radiusVal = computed(() => state.cardRadius ?? 19)
 const searchRadiusVal = computed(() => state.searchRadius ?? 29)
+const searchAnimOptions = [['none', '无'], ['sink', '沉入'], ['lift', '浮升']]
+const tileEnterOptions = [['fade', '整体淡入'], ['drop', '依次落位']]
+const folderAnimOptions = [['normal', '正常缩放'], ['flip', '3D翻转']]
 const densityOptions = [['compact', '紧凑'], ['comfort', '舒适'], ['spacious', '宽松']]
 function setGlass(v) { state.glassStrength = parseFloat(v); save() }
 function setRadius(v) { state.cardRadius = parseInt(v, 10); save() }
 function setSearchRadius(v) { state.searchRadius = parseInt(v, 10); save() }
+function setSearchAnim(v) { state.searchAnim = v; save() }
+function setTileEnter(v) { state.tileEnter = v; save() }
+function setFolderAnim(v) { state.folderAnim = v; save() }
 function setDensity(v) { state.tileDensity = v; save() }
 
 /* 图标形状 / 尺寸 / 光晕 / 悬浮动效 / 磁贴名称 */
@@ -217,6 +274,19 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
           收起个性化
         </button>
       </Transition>
+      <!-- 外观预设：折叠状态置顶，一键应用整套外观 -->
+      <Transition name="pg">
+        <div v-if="!showPersonalized && !ui.searchFilter" class="preset-box">
+          <div class="set-label">外观预设</div>
+          <p class="preset-hint">一键应用整套外观，之后可展开逐项微调</p>
+          <div class="preset-list">
+            <button v-for="p in PRESETS" :key="p.id" class="preset-card" @click="applyPreset(p)">
+              <span class="preset-name">{{ p.name }}</span>
+              <span class="preset-desc">{{ p.desc }}</span>
+            </button>
+          </div>
+        </div>
+      </Transition>
       <!-- 分组渲染，按搜索过滤（展开 / 收起带过渡） -->
       <TransitionGroup name="pg" tag="div">
         <div v-for="g in visibleRows" :key="g.label" class="set-group" :class="{ 'set-group-first': g === visibleRows[0] }">
@@ -273,6 +343,13 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               <div class="opacity-row">
                 <input type="range" min="10" max="29" step="1" :disabled="rowFixed(r)" :value="searchRadiusVal" @input="e => setSearchRadius(e.target.value)">
                 <span class="opacity-val">{{ searchRadiusVal }}px</span>
+              </div>
+            </div>
+            <!-- 搜索框动画 -->
+            <div v-else-if="r.id === 'searchAnim'" class="set-row">
+              <div><div class="r-t">搜索框动画</div><div class="r-d">聚焦时的 3D 动效：无 / 沉入 / 浮升</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in searchAnimOptions" :key="v" :class="{ on: state.searchAnim === v }" @click="setSearchAnim(v)">{{ label }}</button>
               </div>
             </div>
             <!-- 字体 -->
@@ -397,6 +474,20 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
                 <button v-for="[v, label] in openInOptions" :key="v" :class="{ on: state.linkOpenIn === v }" @click="setOpenIn(v)">{{ label }}</button>
               </div>
             </div>
+            <!-- 磁贴入场动画 -->
+            <div v-else-if="r.id === 'tileEnter'" class="set-row">
+              <div><div class="r-t">磁贴入场动画</div><div class="r-d">进入链接页：整体淡入 / 依次落位</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in tileEnterOptions" :key="v" :class="{ on: state.tileEnter === v }" @click="setTileEnter(v)">{{ label }}</button>
+              </div>
+            </div>
+            <!-- 文件夹展开动画 -->
+            <div v-else-if="r.id === 'folderAnim'" class="set-row">
+              <div><div class="r-t">文件夹展开动画</div><div class="r-d">打开文件夹：正常缩放 / 3D 翻转</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in folderAnimOptions" :key="v" :class="{ on: state.folderAnim === v }" @click="setFolderAnim(v)">{{ label }}</button>
+              </div>
+            </div>
           </template>
         </div>
       </TransitionGroup>
@@ -461,6 +552,19 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 .set-empty{text-align:center;color:var(--text-faint);font-size:.85rem;padding:1.5rem 0;}
 /* Fluent 风格提示：独立整行，不挤压 seg 控件宽度 */
 .style-hint{font-size:.76rem;color:var(--text-faint);line-height:1.5;padding:.35rem .2rem .5rem;border-top:1px dashed var(--glass-border);}
+/* 外观预设：折叠状态顶部的一键应用卡片 */
+.preset-box{margin-bottom:1.4rem;}
+.preset-hint{font-size:.76rem;color:var(--text-faint);margin:-.35rem 0 .6rem;}
+.preset-list{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.preset-card{
+  display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;
+  padding:.6rem .75rem;border-radius:12px;text-align:left;cursor:pointer;
+  background:var(--glass-soft);border:1px solid var(--glass-border);
+  transition:background .2s,transform .2s var(--ease),border-color .2s;
+}
+.preset-card:hover{background:rgba(var(--accent-rgb),.12);border-color:rgba(var(--accent-rgb),.5);transform:translateY(-1px);}
+.preset-name{font-size:.88rem;font-weight:600;color:var(--text);}
+.preset-desc{font-size:.72rem;color:var(--text-faint);line-height:1.35;}
 /* Fluent 风格下材质类设置固定：置灰不可交互 */
 .set-row.fixed{opacity:.5;}
 .set-row.fixed input[type="range"],.set-row.fixed input[type="color"],.set-row.fixed .switch,.set-row.fixed .btn-mini{cursor:not-allowed;}

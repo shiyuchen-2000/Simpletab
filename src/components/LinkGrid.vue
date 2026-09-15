@@ -8,8 +8,8 @@ const areaRef = ref(null)
 const draggingId = ref(null)
 const dragInFid = ref(null)
 
-const rootLinks = computed(() => state.links.filter(l => !l.folderId))
-const folderLinks = fid => state.links.filter(l => l.folderId === fid)
+const rootLinks = computed(() => state.links.filter(l => l && typeof l === 'object' && !l.folderId))
+const folderLinks = fid => state.links.filter(l => l && typeof l === 'object' && l.folderId === fid)
 
 function openLink(l) { openLinkUrl(l.url) }
 
