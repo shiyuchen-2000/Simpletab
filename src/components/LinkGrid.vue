@@ -254,7 +254,7 @@ function dropIndex() {
          @click="openLink(l)"
          @dragstart="onLinkDragstart($event, l.id)" @dragend="onDragend">
       <div class="t-ico">
-        <img v-if="l.iconMode !== 'text'" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+        <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              @error="onTileImgError" @load="onTileImgLoad">
         <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
       </div>

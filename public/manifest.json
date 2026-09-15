@@ -13,7 +13,9 @@
   "host_permissions": [
     "https://www.google.com/*",
     "https://*.gstatic.com/*",
-    "https://api.iowen.cn/*",
+    "https://*.gstatic.cn/*",
+    "https://favicon.yandex.net/*",
+    "https://favicon.im/*",
     "https://icons.duckduckgo.com/*"
   ],
   "icons": {

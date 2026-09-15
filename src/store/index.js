@@ -127,7 +127,7 @@ function chunkLinks(links) {
   return blocks
 }
 /* 从 sync 读取完整状态：base（设置+文件夹）+ 链接分块；兼容旧版单 key 内直接含 links 的格式 */
-async function readSyncState() {
+export async function readSyncState() {
   const got = await chrome.storage.sync.get(null)
   const base = got[SYNC_BASE_KEY]
   if (!base) return null
@@ -195,6 +195,8 @@ async function migrateLegacyWallpaper(dataUrl) {
 }
 export async function persistState(state) {
   // 壁纸已独立存于 IndexedDB，不再进 storage：消除 base64 膨胀与每次保存的全量序列化。
+  // 仅写本地（local / localStorage 兜底）。云端快照由手动「立即同步」pushToCloud 写入——
+  // 否则每次改动自动同步会让云端恒等于当前状态，「从云端恢复」永远看不到变化。
   const { wallpaper, wallpaperType, ...rest } = state
   const { links = [], folders = [], ...settings } = rest
   const settingsObj = JSON.parse(JSON.stringify(settings))
@@ -208,21 +210,31 @@ export async function persistState(state) {
   } else {
     try { localStorage.setItem('startpage_state', JSON.stringify(localObj)) } catch (e) { /* ignore */ }
   }
-  // 云端备份（sync，跟随账号）：设置+文件夹一个 key，链接分块，突破 8KB 单条目限制
-  if (hasSyncStorage) {
-    try {
-      await chrome.storage.sync.set({ [SYNC_BASE_KEY]: { ...settingsObj, folders: foldersObj } })
-      const all = await chrome.storage.sync.get(null)
-      const oldKeys = Object.keys(all).filter(k => k.startsWith(SYNC_LINKS_PREFIX))
-      if (oldKeys.length) await chrome.storage.sync.remove(oldKeys)
-      const blocks = chunkLinks(linksArr)
-      for (let i = 0; i < blocks.length; i++) {
-        await chrome.storage.sync.set({ [SYNC_LINKS_PREFIX + i]: blocks[i] })
-      }
-      refreshSyncUsage()
-    } catch (e) {
-      toast('云备份已达上限，部分数据仅本机保存', 'err')
+}
+
+/* 手动推送到云端快照（设置+文件夹一个 key，链接分块，突破 8KB 单条目限制）。
+   仅由「立即同步」调用：把当前状态保存为云端快照，「从云端恢复」可回到该快照。返回是否成功 */
+export async function pushToCloud() {
+  if (!hasSyncStorage) return false
+  const { wallpaper, wallpaperType, ...rest } = state
+  const { links = [], folders = [], ...settings } = rest
+  const settingsObj = JSON.parse(JSON.stringify(settings))
+  const foldersObj = JSON.parse(JSON.stringify(folders))
+  const linksArr = JSON.parse(JSON.stringify(links))
+  try {
+    await chrome.storage.sync.set({ [SYNC_BASE_KEY]: { ...settingsObj, folders: foldersObj } })
+    const all = await chrome.storage.sync.get(null)
+    const oldKeys = Object.keys(all).filter(k => k.startsWith(SYNC_LINKS_PREFIX))
+    if (oldKeys.length) await chrome.storage.sync.remove(oldKeys)
+    const blocks = chunkLinks(linksArr)
+    for (let i = 0; i < blocks.length; i++) {
+      await chrome.storage.sync.set({ [SYNC_LINKS_PREFIX + i]: blocks[i] })
     }
+    refreshSyncUsage()
+    return true
+  } catch (e) {
+    toast('云备份已达上限，部分数据仅本机保存', 'err')
+    return false
   }
 }
 /* 将已读取的数据合并进响应式 state（缺失字段回落到当前默认） */

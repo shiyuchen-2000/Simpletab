@@ -1,10 +1,11 @@
 // Cloudflare Pages Function：favicon 图标代理（服务端转发，绕过浏览器 CORS）
 // 路由 /favicon/:host —— 网站环境下 faviconCache.js 的 /favicon/ 前缀请求命中
-// 主源 Google s2（64px，清晰），失败换 DuckDuckGo 兜底（与扩展端多源策略呼应）
+// 主源 Google s2（64px，清晰），失败依次回退 Bing、DuckDuckGo（与扩展端多源策略呼应）
 // 返回带 CDN 缓存头，favicon 可被边缘缓存，进一步节省请求
 
 const SOURCE = host => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
-const FALLBACK = host => `https://icons.duckduckgo.com/ip3/${host}.ico`
+const FALLBACK = host => `https://favicon.yandex.net/favicon/${host}`
+const FALLBACK2 = host => `https://icons.duckduckgo.com/ip3/${host}.ico`
 
 export async function onRequestGet({ params }) {
   const host = String(params.host || '').trim()
@@ -12,7 +13,7 @@ export async function onRequestGet({ params }) {
   if (!host || /[\/?#]/.test(host)) {
     return new Response('Bad request', { status: 400 })
   }
-  for (const url of [SOURCE(host), FALLBACK(host)]) {
+  for (const url of [SOURCE(host), FALLBACK(host), FALLBACK2(host)]) {
     try {
       const res = await fetch(url, { redirect: 'follow' })
       if (!res.ok) continue

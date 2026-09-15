@@ -2,7 +2,7 @@
 // 数据管理：导出 / 导入配置 + 云端手动推拉
 // 导出不含壁纸（壁纸走 IndexedDB，本设备独立）；导入为整体覆盖
 // ============================================================
-import { state, save } from './index'
+import { state, save, readSyncState } from './index'
 
 const APP_TAG = 'SimpleTab'
 
@@ -55,14 +55,13 @@ export function applyImport(data, opts = { settings: true, links: true }) {
   return null
 }
 
-/* 从云端备份读取配置，整理为与导出文件相同的结构；无备份返回 null */
+/* 从云端备份读取配置，整理为与导出文件相同的结构；无备份返回 null。
+   复用 readSyncState 完整读取（base 设置+文件夹 + 链接分块 startpage_links_*），
+   否则 state 缺 links 数组，validate 会误判「配置内容不完整」 */
 export async function loadFromSync() {
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.sync) return null
   let data = null
-  try {
-    const got = await chrome.storage.sync.get('startpage_state')
-    if (got && got.startpage_state) data = got.startpage_state
-  } catch (e) { /* 读取失败按无备份处理 */ }
+  try { data = await readSyncState() } catch (e) { /* 读取失败按无备份处理 */ }
   if (!data) return null
   return { app: APP_TAG, data: { state: data } }
 }

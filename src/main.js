@@ -14,10 +14,28 @@ async function bootstrap() {
     setTimeout(() => { restoreFromSync().then(ok => { if (ok) warmFaviconCache(state.links) }) }, 1500)
   }
   createApp(App).mount('#app')
+  /* 标签页 favicon 兜底：Edge/Chromium 对 newtab 覆盖页的静态 favicon 有时不刷新到标签栏，
+     页面加载后动态重设 favicon link 可触发浏览器重新抓取并更新标签图标 */
+  setTimeout(ensureTabFavicon, 0)
   // 字体探测 + favicon 预热延后到浏览器空闲执行，避免阻塞首屏渲染
   const idle = () => { loadFonts(); warmFaviconCache(state.links) }
   if ('requestIdleCallback' in window) requestIdleCallback(idle, { timeout: 1500 })
   else setTimeout(idle, 300)
+}
+
+/* 移除并重设 favicon link（16/32/48 三尺寸），触发浏览器对标签栏图标的重新抓取 */
+function ensureTabFavicon() {
+  const sizes = [16, 32, 48]
+  const head = document.head
+  head.querySelectorAll('link[rel="icon"]').forEach(l => l.remove())
+  for (const s of sizes) {
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.type = 'image/png'
+    link.sizes = `${s}x${s}`
+    link.href = `./icons/icon${s}.png`
+    head.appendChild(link)
+  }
 }
 
 bootstrap()

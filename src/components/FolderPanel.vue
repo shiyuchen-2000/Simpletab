@@ -168,7 +168,7 @@ function letterStyle(l) {
              @dragstart="e => { e.dataTransfer.setData('text/link', l.id); e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('dragging') }"
              @dragend="e => e.currentTarget.classList.remove('dragging')">
           <div class="t-ico">
-            <img v-if="l.iconMode !== 'text'" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+            <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
                  @error="onImgError" @load="onImgLoad">
             <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
           </div>

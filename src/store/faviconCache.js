@@ -7,6 +7,8 @@
 import { ref } from 'vue'
 
 const CACHE_KEY = 'favicon_cache'      // chrome.storage.local 独立键
+const CACHE_VER_KEY = 'favicon_cache_ver'
+const CACHE_VERSION = '4'              // 源方案版本：源调整（favicon.im 置首高清源）后旧缓存需清除重拉
 const TTL = 7 * 24 * 3600 * 1000       // 7 天过期；过期后旧图先用、后台刷新（stale-while-revalidate）
 const MAX_ENTRIES = 500                // 条数上限（与壁纸共用 10MB 配额，需封顶）
 const MAX_BYTES = 1.5 * 1024 * 1024    // 总量上限约 1.5MB（单条平均 ~3KB）
@@ -14,10 +16,19 @@ const MAX_SINGLE = 120 * 1024          // 单条上限 120KB，拒绝异常大�
 const FETCH_TIMEOUT = 3000             // 每源超时 3s，超时换下一个源
 const SAVE_DEBOUNCE = 500              // 批量落盘防抖
 
-// 多源策略：按顺序逐个尝试。google 用户环境已验证可用且为首选（重定向落地 gstatic 已在 host_permissions 授权）
+// 多源策略：按顺序逐个尝试。国内无代理环境可用源前置（favicon.im/google-cn/yandex），
+// 各源域名已同步在 manifest host_permissions 授权。
+// favicon.im：质量最高（SVG 矢量可无限缩放 / 大尺寸 PNG/ICO，如 bilibili 512px）；
+//   未收录站点返回灰色圆首字母占位 SVG（与本地字母图标类似，可接受）。
+// google-cn：Google faviconV2 经国内可达的 gstatic.cn CDN（32-64px，size 参数不保证更大）；
+//   未收录站点返回 HTTP 404，被 res.ok 检查拒绝，不污染缓存。
+// 注意：bing 的 favicon 服务对所有站点返回固定 Bing 品牌图标，不可作为源；
+// yandex 对未收录站点返回 1x1 透明图，会被 validImage 尺寸校验拒绝并自动换源。
 export const FAVICON_SOURCES = [
+  { name: 'favicon.im', url: h => `https://favicon.im/${h}` },
+  { name: 'google-cn',  url: h => `https://t1.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent('https://' + h)}&size=64` },
+  { name: 'yandex',     url: h => `https://favicon.yandex.net/favicon/${h}` },
   { name: 'google',     url: h => `https://www.google.com/s2/favicons?domain=${h}&sz=64` },
-  { name: 'iowen',      url: h => `https://api.iowen.cn/favicon/${h}.png` },
   { name: 'duckduckgo', url: h => `https://icons.duckduckgo.com/ip3/${h}.ico` }
 ]
 const hasChromeStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.local
@@ -25,7 +36,6 @@ const hasChromeStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!
    网站环境（无 chrome）：走 Cloudflare Pages 代理 /favicon/:host（同源请求，无 CORS 限制） */
 const isExtension = hasChromeStorage
 const PROXY_BASE = '/favicon/'
-const fallbackUrl = h => isExtension ? FAVICON_SOURCES[0].url(h) : PROXY_BASE + h
 /* 抓取源：扩展按三源逐个尝试；网站仅代理路径（Cloudflare 服务端转发 google s2，保留 64px 清晰度） */
 const fetchSources = h => isExtension
   ? FAVICON_SOURCES.map(s => s.url(h))
@@ -98,15 +108,28 @@ export async function loadFaviconCache() {
   if (loaded) return
   loaded = true
   let map = null
+  let ver = null
   try {
     if (isExtension) {
-      const res = await chrome.storage.local.get(CACHE_KEY)
+      const res = await chrome.storage.local.get([CACHE_KEY, CACHE_VER_KEY])
       map = res[CACHE_KEY]
+      ver = res[CACHE_VER_KEY]
     } else {
       const s = localStorage.getItem(CACHE_KEY)
       if (s) map = JSON.parse(s)
+      ver = localStorage.getItem(CACHE_VER_KEY)
     }
   } catch (e) { map = null }
+  /* 缓存版本迁移：源方案变更后旧缓存可能混入品牌默认图标（如 bing logo），
+     版本不匹配时清空缓存重新拉取，避免错误图标继续显示 */
+  if (ver !== CACHE_VERSION) {
+    cache.value = {}
+    map = null
+    try {
+      if (isExtension) await chrome.storage.local.set({ [CACHE_VER_KEY]: CACHE_VERSION })
+      else localStorage.setItem(CACHE_VER_KEY, CACHE_VERSION)
+    } catch (e) { /* ignore */ }
+  }
   try {
     if (map && typeof map === 'object') {
       for (const [host, v] of Object.entries(map)) {
@@ -170,8 +193,10 @@ export function faviconSrc(url) {
     if (Date.now() - hit.t > TTL) ensureFavicon(host)
     return hit.data
   }
+  /* 未命中：不返回远程兜底 URL——部分源（如 bing）对未知站点返回品牌默认图标会污染显示。
+     返回 '' 让磁贴先显示首字母，后台拉取真实 favicon 成功后缓存更新、组件自动切换 */
   ensureFavicon(host)
-  return fallbackUrl(host)
+  return ''
 }
 /* 异步拉取，带并发去重；新鲜缓存直接返回 */
 export function ensureFavicon(host) {

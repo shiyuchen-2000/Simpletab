@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ui, save, toast, hasSyncStorage, syncUsage, refreshSyncUsage } from '../store'
+import { ui, toast, hasSyncStorage, syncUsage, refreshSyncUsage, pushToCloud } from '../store'
 import { exportConfig, applyImport, loadFromSync } from '../store/backup'
 import { useGearModal } from '../store/useGearModal'
 
@@ -42,15 +42,20 @@ async function onRestoreCloud() {
   } catch (err) { importErr.value = '读取云端备份失败' }
 }
 
-function onPush() { save(); toast('已触发全量同步') }
+async function onPush() {
+  const ok = await pushToCloud()
+  await refreshSyncUsage()
+  toast(ok ? '已同步到云端（' + (syncUsage.value / 1024).toFixed(1) + ' KB）' : '同步失败：云备份超限或未登录账号', ok ? '' : 'err')
+}
 
 function confirmApply() {
   const err = applyImport(pending.value, { settings: opts.value.settings, links: opts.value.links })
   if (err) { importErr.value = err; pending.value = null; return }
   const what = [opts.value.settings && '设置', opts.value.links && '链接'].filter(Boolean).join('与')
+  const linkCount = pending.value?.data?.state?.links?.length ?? 0
   pending.value = null
   closeModal()
-  toast('已导入' + what)
+  toast('已导入' + what + (opts.value.links ? '（链接 ' + linkCount + ' 条）' : ''))
 }
 function cancelApply() { pending.value = null }
 
@@ -90,7 +95,7 @@ const syncWarn = computed(() => syncPct.value >= 90)
 
       <div class="dm-sec">
         <div class="dm-sec-title">云端同步</div>
-        <p class="dm-desc">跟随浏览器账号自动备份设置与链接（不含壁纸）。以下可手动推送当前配置到云端，或从云端拉取覆盖本机。</p>
+        <p class="dm-desc">跟随浏览器账号同步设置与链接（不含壁纸）。「立即同步」把当前状态保存为云端快照，「从云端恢复」回到该快照。配置改动只保存本机，不会自动覆盖云端。</p>
         <div class="sync-status-row">
           <span>同步状态</span>
           <span :class="{ 'sync-ok': hasSyncStorage }">{{ hasSyncStorage ? '已通过浏览器账号同步' : '未登录浏览器账号，仅本机保存' }}</span>
