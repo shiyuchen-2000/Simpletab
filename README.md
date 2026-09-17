@@ -1,11 +1,11 @@
 <img src="./public/icons/icon128.png" width="120px" style="border-radius:12px"/>
 
-<h1 align="center"/> **SimpleTab 简页**
+<h1 align="center"/> SimpleTab 简页
 
 <p  align="center">
   <a href="https://microsoftedge.microsoft.com/addons/detail/simpletab-%E7%AE%80%E9%A1%B5/kpllfgfglhdpkamelahokhcjijdjdech"><img src="https://img.shields.io/badge/Edge%20扩展-立即安装-0076D6?&style=flat" alt="Edge 扩展"></a>&nbsp;&nbsp;&nbsp;<a href="https://simpletab.pages.dev/"><img src="https://img.shields.io/badge/Edge%20网页版-立即试用-3CC8BF?&style=flat" alt="在线网页"></a></p>
 ---
-> 奔向高度定制化赛道的 Edge 浏览器起始页——**简约而不简单**。
+奔向高度定制化赛道的 Edge 浏览器起始页——**简约而不简单**。
 
 一款外表克制、内核强大的新标签页扩展。打开第一眼，是干净的时钟与搜索框；但它的每一处，都藏着可被你重塑的细节。
 
