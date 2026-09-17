@@ -191,6 +191,7 @@ footer .small{font-size:12.5px;color:var(--text-faint);margin-top:.3rem}
 .modal-mask{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;
   background:rgba(13,43,46,.35);backdrop-filter:blur(6px);
   opacity:0;transition:opacity .3s var(--ease)}
+.modal-mask[hidden]{display:none}
 .modal-mask.show{opacity:1}
 .modal-box{width:min(480px,92vw);border-radius:20px;padding:26px 28px;background:#fff;
   box-shadow:0 30px 70px rgba(13,43,46,.2);transform:translateY(16px) scale(.97);
