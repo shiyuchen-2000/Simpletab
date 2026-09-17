@@ -37,6 +37,10 @@ function openPanel(name) {
   ui.dropdownOpen = false
   ui.modal = name
 }
+/* 安装扩展：打开宣传页/下载页（新标签页） */
+function openInstall() {
+  window.open('https://simpletabgo.pages.dev/', '_blank')
+}
 </script>
 
 <template>
@@ -95,6 +99,13 @@ function openPanel(name) {
         <svg class="di-b" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
       </span>
       新手指引
+    </button>
+    <button class="d-item" @click="openInstall">
+      <span class="di">
+        <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <svg class="di-b" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+      </span>
+      安装扩展
     </button>
     <button class="d-item" @click="openPanel('about')">
       <span class="di">
