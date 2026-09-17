@@ -1,4 +1,9 @@
-# SimpleTab 简页
+<img src="./public/icons/icon128.png" width="120px" style="border-radius:12px"/>
+
+<h1 align="center"/> SimpleTab 简页
+
+<p  align="center">
+  <a href="https://microsoftedge.microsoft.com/addons/detail/simpletab-%E7%AE%80%E9%A1%B5/kpllfgfglhdpkamelahokhcjijdjdech"><img src="https://img.shields.io/badge/Edge%20扩展-立即安装-0076D6?&style=flat" alt="Edge 扩展"></a>&nbsp;&nbsp;&nbsp;<a href="https://simpletab.pages.dev/"><img src="https://img.shields.io/badge/Edge%20网页版-立即试用-3CC8BF?&style=flat" alt="在线网页"></a></p>
 
 > 奔向高度定制化赛道的 Edge 浏览器起始页——**简约而不简单**。
 
@@ -8,7 +13,7 @@
 - **壁纸自由**：极光渐变 / 静态图片 / 视频壁纸
 - **3D 动效**：搜索框沉入、磁贴落位、文件夹翻转
 - **一键外观预设**：纯净 / 质感 / 现代 / 灵动
-- **几十项细节可调**：主题色、圆角、密度、图标、透明度、动画……
+- **30+项细节可调**：主题色、圆角、密度、图标、透明度、动画……
 
 **简约，是把选择权交回你手里的另一种表达。**
 
