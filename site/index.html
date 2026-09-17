@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpleTab 简页 · 把选择权交回你手里</title>
+<meta name="description" content="一款外表克制、内核强大的 Edge / Chrome 新标签页扩展：时钟、搜索、快捷链接、壁纸主题，30+ 项细节高度可定制。">
+<link rel="icon" type="image/png" href="./assets/simpletab-logo.png">
+<link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+
+  <!-- 进入遮罩 -->
+  <div class="loader" id="loader">
+    <img src="./assets/simpletab-logo.png" alt="SimpleTab 简页">
+    <div class="lt">SimpleTab 简页</div>
+    <button class="loader-btn" id="loaderBtn" type="button">把起始页，还给自己</button>
+  </div>
+
+  <!-- ===== Hero：沉浸式首屏 ===== -->
+  <section class="hero">
+    <a class="brand" href="#top">
+      <img class="logo" src="./assets/simpletab-logo.png" alt="SimpleTab 简页">
+      <span>SimpleTab 简页</span>
+    </a>
+
+    <div class="hero-inner">
+      <h1>简约，是把选择权<br>交回你手里的另一种表达。</h1>
+      <p class="sub">多渠道安装，即开即用</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href="https://simpletab.pages.dev/" target="_blank" rel="noopener">立即试用</a>
+        <a class="btn btn-ghost" href="https://microsoftedge.microsoft.com/addons/detail/simpletab-%E7%AE%80%E9%A1%B5/kpllfgfglhdpkamelahokhcjijdjdech" target="_blank" rel="noopener">安装扩展</a>
+      </div>
+    </div>
+
+    <!-- 主视觉占位：扩展界面预览 -->
+    <div class="hero-visual">
+      <span class="ph-label">主视觉占位 · 扩展界面截图</span>
+      <img src="./assets/shots/hero.png" alt="SimpleTab 简页主界面" onerror="this.classList.add('miss')">
+    </div>
+
+    <div class="scroll-hint" id="hint">向下滚动</div>
+  </section>
+
+  <main>
+
+    <!-- ===== 功能：左右交替介绍 ===== -->
+    <section class="features" id="features">
+      <div class="sec-head reveal">
+        <h2>功能</h2>
+        <p>从实用到气质——把每一次打开，变成一件顺心的小事。</p>
+      </div>
+
+      <!-- 功能总览 -->
+      <div class="overview reveal">
+        <div class="ov-card">
+          <div class="ov-head">
+            <svg class="ov-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <h4>搜索功能</h4>
+          </div>
+          <p>多搜索引擎一键切换，回车即达，Tab 循环切换。</p>
+        </div>
+        <div class="ov-card">
+          <div class="ov-head">
+            <svg class="ov-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+            <h4>网站捷径</h4>
+          </div>
+          <p>常用站点磁贴化，文件夹归类，拖拽排序、右键管理。</p>
+        </div>
+        <div class="ov-card">
+          <div class="ov-head">
+            <svg class="ov-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <h4>壁纸</h4>
+          </div>
+          <p>极光渐变、静态图片、视频壁纸，本地存储、随喜好切换。</p>
+        </div>
+        <div class="ov-card">
+          <div class="ov-head">
+            <svg class="ov-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <h4>自定义</h4>
+          </div>
+          <p>主题色、圆角、密度、透明度、动画，30+ 项细节可调。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-1.png" alt="搜索功能界面" class="rounded" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>搜索，是留给思想的第一道门</h3>
+          <p>一个不喧哗的入口——回车即达，Tab 在引擎间流转。键盘落下的地方，答案早已就位。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-2.png" alt="磁贴与文件夹界面" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>常用之地，自成秩序</h3>
+          <p>图标安静落位，文件夹收拢归类。拖拽排序、右键整理，让每一次直达都有归途。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-3.png" alt="双设计风格界面" class="rounded" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>毛玻璃与 Fluent 2，两种呼吸</h3>
+          <p>一种通透，一种利落。一键切换，同一面壁纸也能拥有不同的气质。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-4.png" alt="壁纸界面" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>壁纸，是目光最先抵达的地方</h3>
+          <p>极光渐变、静态图片、循环视频——把喜欢的样子，铺成每一次打开新页的序章。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-5.png" alt="外观预设界面" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>四种气质，一键成诗</h3>
+          <p>纯净、质感、现代、灵动。一套预设即成整套气质，之后仍可逐项细调。</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="f-media reveal-media">
+          <span class="ph-label">界面截图占位</span>
+          <img src="./assets/shots/feature-6.png" alt="个性化设置界面" class="rounded" onerror="this.classList.add('miss')">
+        </div>
+        <div class="f-desc reveal-desc">
+          <h3>每一个细节，都为你留白</h3>
+          <p>主题色、圆角、密度、图标光晕、透明度、动画……三十余处开关，皆可重塑。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 安装渠道 ===== -->
+    <section class="channels">
+      <div class="sec-head reveal">
+        <h2>现在开始，定义你的每一次开始</h2>
+        <p>从空白到无限，只差一个你</p>
+      </div>
+      <div class="channel-grid">
+        <a class="channel" href="https://microsoftedge.microsoft.com/addons/detail/simpletab-%E7%AE%80%E9%A1%B5/kpllfgfglhdpkamelahokhcjijdjdech" target="_blank" rel="noopener">
+          <span class="ch-icon">
+            <svg viewBox="0 0 48 48"><defs><linearGradient id="edgeg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3ac0f2"/><stop offset="1" stop-color="#16a96e"/></linearGradient></defs><circle cx="24" cy="24" r="23" fill="url(#edgeg)"/><path fill="#fff" d="M23 9.6c-6.6 0-11.8 5.1-11.8 11.7 0 5.2 3.3 9 8.5 9.5l-.5-3.2c-3-.7-5.1-3-5.1-6.2 0-3.4 2.7-6.1 6.1-6.1h9c2.4 0 4.3-1.9 4.3-4.2 0-1-.9-1.5-1.8-1.5H23z"/><path fill="#fff" d="M36.4 18.9c.5 1 .8 2 .8 3.1 0 4.3-3 7.9-7.2 8.8 2.5-2.5 4-5.8 4-9.4 0-1.2-.1-2.3-.4-3.3l2.8.8z"/></svg>
+          </span>
+          <div class="ch-body">
+            <h3>Edge 扩展商店</h3>
+            <p>安装到 Edge 浏览器，新建标签页即刻生效</p>
+            <span class="ch-cta">安装扩展 →</span>
+          </div>
+        </a>
+        <a class="channel" href="https://simpletab.pages.dev/" target="_blank" rel="noopener">
+          <span class="ch-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>
+          </span>
+          <div class="ch-body">
+            <h3>网页版试用</h3>
+            <p>无需安装，浏览器打开即用</p>
+            <span class="ch-cta">立即试用 →</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>SimpleTab 简页 · v1.4.0 · 开源在 <a href="https://github.com/shiyuchen-2000/Simpletab" target="_blank" rel="noopener">GitHub</a></p>
+    <p class="small">© 2026 史宇辰</p>
+  </footer>
+
+  <!-- 悬浮一键到顶 -->
+  <button class="to-top" id="toTop" type="button" aria-label="回到顶部">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+  </button>
+
+  <script src="./assets/main.js"></script>
+</body>
+</html>
