@@ -35,6 +35,28 @@
     })
   }
 
+  // 关于作者弹窗
+  var authorLink = document.getElementById('authorLink')
+  var authorMask = document.getElementById('authorMask')
+  function openAuthor() {
+    authorMask.removeAttribute('hidden')
+    requestAnimationFrame(function () { authorMask.classList.add('show') })
+  }
+  function closeAuthor() {
+    authorMask.classList.remove('show')
+    setTimeout(function () { authorMask.setAttribute('hidden', '') }, 300)
+  }
+  if (authorLink && authorMask) {
+    authorLink.addEventListener('click', openAuthor)
+    authorMask.addEventListener('click', function (e) { if (e.target === authorMask) closeAuthor() })
+    var ac = document.getElementById('authorClose'), ao = document.getElementById('authorOK')
+    if (ac) ac.addEventListener('click', closeAuthor)
+    if (ao) ao.addEventListener('click', closeAuthor)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !authorMask.hasAttribute('hidden')) closeAuthor()
+    })
+  }
+
   // 滚动渐显（双向）：进入视口上浮到位，移出视口回落；reduced-motion 下跳过
   if (reduce) return
   var items = document.querySelectorAll('.reveal, .reveal-media, .reveal-desc')

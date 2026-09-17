@@ -184,6 +184,25 @@ main section{max-width:1100px;margin:0 auto;padding:100px 24px}
 footer{padding:48px 24px;text-align:center;border-top:1px solid rgba(13,43,46,.08);color:var(--text-dim);font-size:14px;background:rgba(255,255,255,.5)}
 footer a{color:var(--accent-text)}
 footer .small{font-size:12.5px;color:var(--text-faint);margin-top:.3rem}
+.author-link{background:none;border:none;padding:0;margin:0;font-size:inherit;font-family:inherit;color:var(--accent-text);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.author-link:hover{opacity:.75}
+
+/* ===== 关于作者弹窗 ===== */
+.modal-mask{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;
+  background:rgba(13,43,46,.35);backdrop-filter:blur(6px);
+  opacity:0;transition:opacity .3s var(--ease)}
+.modal-mask.show{opacity:1}
+.modal-box{width:min(480px,92vw);border-radius:20px;padding:26px 28px;background:#fff;
+  box-shadow:0 30px 70px rgba(13,43,46,.2);transform:translateY(16px) scale(.97);
+  transition:transform .3s var(--ease)}
+.modal-mask.show .modal-box{transform:none}
+.mb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mb-title{font-size:18px;font-weight:700;color:#143038}
+.mb-close{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:rgba(13,43,46,.5);background:none;border:none;cursor:pointer}
+.mb-close:hover{background:rgba(13,43,46,.06);color:#143038}
+.mb-body h4{font-size:15px;font-weight:600;color:var(--accent-text);margin-bottom:10px}
+.mb-body p{font-size:14.5px;color:var(--text-dim);line-height:1.9}
+.mb-foot{display:flex;justify-content:flex-end;margin-top:22px}
 
 /* ===== 响应式 ===== */
 @media (max-width:860px){

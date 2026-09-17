@@ -184,8 +184,27 @@
 
   <footer>
     <p>SimpleTab 简页 · v1.4.0 · 开源在 <a href="https://github.com/shiyuchen-2000/Simpletab" target="_blank" rel="noopener">GitHub</a></p>
-    <p class="small">© 2026 史宇辰</p>
+    <p class="small">© 2026 <button class="author-link" id="authorLink" type="button">关于作者</button></p>
   </footer>
+
+  <!-- 关于作者弹窗 -->
+  <div class="modal-mask" id="authorMask" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-label="关于作者">
+      <div class="mb-head">
+        <span class="mb-title">关于作者</span>
+        <button class="mb-close" id="authorClose" type="button" aria-label="关闭">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="mb-body">
+        <h4>作者的话</h4>
+        <p>我是00后打工人一枚，产品经理，本着学习 Agent 的初衷，也为了自己的浏览器使用体验做了这个项目，并非职业开发者。后续的需求呢，我如果工作有空就给大家做，但是不会做的呢，那我也是做不出来。如果真有人用就太好了。</p>
+      </div>
+      <div class="mb-foot">
+        <button class="btn btn-primary" id="authorOK" type="button">知道了</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 悬浮一键到顶 -->
   <button class="to-top" id="toTop" type="button" aria-label="回到顶部">
