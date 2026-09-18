@@ -373,9 +373,10 @@ export const resolvedTheme = computed(() => state.theme === 'system' ? (systemDa
 watchEffect(() => {
   document.documentElement.dataset.theme = resolvedTheme.value
 })
-/* 风格维度：glass（毛玻璃，默认）/ fluent（Fluent 2），驱动 CSS [data-style] 覆盖块 */
+/* 风格维度：glass（毛玻璃，默认）/ fluent（Fluent 2）/ borderless（无界），驱动 CSS [data-style] 覆盖块 */
 watchEffect(() => {
-  document.documentElement.dataset.style = state.style === 'fluent' ? 'fluent' : 'glass'
+  const s = state.style
+  document.documentElement.dataset.style = (s === 'fluent' || s === 'borderless') ? s : 'glass'
 })
 /* 搜索框动画维度：none / sink（沉入）/ lift（浮升），驱动 CSS [data-search-anim] */
 watchEffect(() => {
@@ -888,7 +889,7 @@ watchEffect(() => {
   document.body.classList.toggle('tile-text-none', state.tileText === 'none')
   document.body.classList.toggle('no-tile-hover', state.tileHoverLift <= 0)
   /* glass-shine 高光仅毛玻璃风格生效；Fluent 下高光/玻璃投影由 [data-style] 覆盖统一处理 */
-  document.body.classList.toggle('glass-shine', !!state.glassShine && state.style !== 'fluent')
+  document.body.classList.toggle('glass-shine', !!state.glassShine && state.style !== 'fluent' && state.style !== 'borderless')
 })
 
 /* 搜索框 / 拓展坞透明度（注入到 html：--search-bg 等 token 定义在 [data-theme] 上） */

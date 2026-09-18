@@ -6,6 +6,15 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.5.0',
+    items: [
+      '新增「无界」设计风格：磁贴去除卡片框与毛玻璃，仅保留图标与名称，搜索框保持玻璃背景',
+      '无界风格下磁贴名称支持 始终显示 / 悬浮显示 / 不显示 三态切换',
+      '无界风格下材质类设置自动置灰（毛玻璃强度 / 玻璃高光 / 卡片圆角 / 透明度 / 图标光晕 / 悬浮动效）',
+      '新增「安装扩展」入口：齿轮菜单一键直达 SimpleTab 宣传页'
+    ]
+  },
+  {
     ver: 'v1.4.0',
     items: [
       '新增「搜索框动画」：无 / 沉入 / 浮升三种 3D 动效，聚焦时 Z 轴位移 + 主题色辉光',
@@ -155,7 +164,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.4.0</span>
+            <span class="am-chip">v1.5.0</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

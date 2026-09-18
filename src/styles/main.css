@@ -1075,3 +1075,42 @@ body:not(.links-open) .dock.dock-visible{display:flex;}
 [data-style="fluent"] .seg{border-radius:8px;}
 [data-style="fluent"] .seg button{border-radius:6px;}
 [data-style="fluent"] .seg button.on{background:rgba(var(--accent-rgb),.14);color:var(--accent-text);font-weight:600;box-shadow:none;}
+
+/* =====================================================
+   SimpleTab 无界风格（html[data-style="borderless"]）
+   去卡片化：磁贴/搜索框/齿轮/拓展坞透明，浮层去毛玻璃
+   ===================================================== */
+/* —— 磁贴：去掉卡片框，仅图标 + 名称 —— */
+[data-style="borderless"] .tile{background:transparent;border-color:transparent;box-shadow:none;}
+[data-style="borderless"] .tile::before{backdrop-filter:none;-webkit-backdrop-filter:none;opacity:1;animation:none;}
+[data-style="borderless"] .tile:hover{background:transparent;transform:translateY(var(--tile-hover-lift,-5px)) translateZ(0);}
+[data-style="borderless"] .tile:active{background:transparent;}
+/* 文件夹磁贴：保留淡边框便于识别 */
+[data-style="borderless"] .tile.folder{border-color:rgba(13,43,46,.2);}
+[data-theme="dark"][data-style="borderless"] .tile.folder{border-color:rgba(255,255,255,.24);}
+[data-style="borderless"] .tile.folder:hover{border-color:rgba(var(--accent-rgb),.5);}
+/* 添加磁贴：幽灵加号，hover 仅主题色淡底 */
+[data-style="borderless"] .tile.add{background:transparent;border-color:transparent;}
+[data-theme="dark"][data-style="borderless"] .tile.add{background:transparent;}
+[data-style="borderless"] .tile.add:hover{background:rgba(var(--accent-rgb),.14);border-color:transparent;}
+/* 搜索框：无界下保持与其他主题一致的玻璃背景（不做透明） */
+/* 齿轮：去卡片 */
+[data-style="borderless"] #gearBtn{background:transparent;border-color:transparent;}
+[data-style="borderless"] #gearBtn::before{backdrop-filter:none;-webkit-backdrop-filter:none;background:transparent;}
+/* 拓展坞：去卡片 */
+[data-style="borderless"] .dock{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+/* 实时预览 */
+[data-style="borderless"] .pv{background:transparent;border-color:transparent;box-shadow:none;}
+/* 浮层：去毛玻璃与重投影，保留半透明底保证可读 */
+[data-style="borderless"] .modal,[data-style="borderless"] .dropdown,[data-style="borderless"] .engine-dropdown,
+[data-style="borderless"] .context-menu,[data-style="borderless"] .overlay-form,[data-style="borderless"] .confirm-box,
+[data-style="borderless"] .folder-panel,[data-style="borderless"] .tour-bubble,[data-style="borderless"] .toast{
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  box-shadow:0 10px 30px rgba(0,0,0,.16);
+  border-color:rgba(13,43,46,.1);
+}
+[data-theme="dark"][data-style="borderless"] .modal,[data-theme="dark"][data-style="borderless"] .dropdown,
+[data-theme="dark"][data-style="borderless"] .engine-dropdown,[data-theme="dark"][data-style="borderless"] .context-menu,
+[data-theme="dark"][data-style="borderless"] .overlay-form,[data-theme="dark"][data-style="borderless"] .confirm-box,
+[data-theme="dark"][data-style="borderless"] .folder-panel,[data-theme="dark"][data-style="borderless"] .tour-bubble,
+[data-theme="dark"][data-style="borderless"] .toast{border-color:rgba(255,255,255,.14);}

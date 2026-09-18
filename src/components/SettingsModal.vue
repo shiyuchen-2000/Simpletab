@@ -148,7 +148,7 @@ const visibleRows = computed(() => {
 const hourOptions = [['12', '12 小时'], ['24', '24 小时']]
 const posOptions = [['top', '顶部'], ['mid', '中部'], ['bottom', '底部'], ['left', '左上'], ['right', '右上']]
 const themeOptions = [['light', '亮色'], ['dark', '黑暗'], ['system', '跟随系统']]
-const styleOptions = [['glass', '毛玻璃'], ['fluent', 'Fluent 2']]
+const styleOptions = [['glass', '毛玻璃'], ['fluent', 'Fluent 2'], ['borderless', '无界']]
 const dateOptions = [
   ['cn-long', '2026年8月14日 星期五'],
   ['cn-short', '2026-08-14 周五'],
@@ -163,7 +163,7 @@ const tileTextOptions = [['always', '始终显示'], ['hover', '悬浮显示'], 
 const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine' }
 /* Fluent 风格下固定的材质类设置项：在 CSS [data-style="fluent"] 块中被 Fluent 规范值覆盖，故置灰不可调 */
 const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
-const rowFixed = r => state.style === 'fluent' && FIXED_ROWS.includes(r.id)
+const rowFixed = r => (state.style === 'fluent' || state.style === 'borderless') && FIXED_ROWS.includes(r.id)
 
 const clockColorVal = computed(() => state.clockColor || (resolvedTheme.value === 'dark' ? '#f2fdfb' : '#0d2b2e'))
 const dateColorVal = computed(() => state.dateColor || (resolvedTheme.value === 'dark' ? '#e9fbf9' : '#0d2b2e'))
@@ -383,6 +383,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
             </div>
             <!-- Fluent 风格提示：独立整行，避免长文字挤压 seg 控件宽度导致换行错位 -->
             <p v-else-if="r.id === 'style' && state.style === 'fluent'" class="style-hint">Fluent 风格下，材质与质感设置将固定为 Fluent 规范值（置灰不可调）</p>
+            <p v-else-if="r.id === 'style' && state.style === 'borderless'" class="style-hint">无界风格下，卡片与毛玻璃将隐藏，仅保留图标与名称（相关材质设置置灰不可调）</p>
             <!-- 主题色 -->
             <div v-else-if="r.id === 'accentColor'" class="set-row" style="align-items:flex-start;">
               <div><div class="r-t">主题色</div><div class="r-d">自定义强调色，按钮 / 图标 / 文字自动适配</div></div>
