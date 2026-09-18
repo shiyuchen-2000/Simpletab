@@ -1,37 +1,30 @@
 <script setup>
-import { ui, state, save, toast, startTour } from '../store'
+import { watch } from 'vue'
+import { ui, startTour } from '../store'
 
-function onGearDragstart(e) {
-  ui.gearDragging = true
-  e.dataTransfer.setData('text/newfolder', '1')
-  e.dataTransfer.effectAllowed = 'copy'
-}
-function onGearDragend() {
-  setTimeout(() => { ui.gearDragging = false }, 0)
-}
+/* 下拉打开时：计算磁贴第一排最后一个磁贴的右边缘，让时钟右边缘对齐它（避让下拉，不消失） */
+watch(() => ui.dropdownOpen, (open) => {
+  const root = document.documentElement
+  if (!open) { root.style.removeProperty('--clock-right'); return }
+  const area = document.querySelector('.link-area')
+  if (!area) return
+  const tiles = Array.from(area.querySelectorAll('.tile'))
+  if (!tiles.length) return
+  /* 按 top 分行，取第一排（top 最小）的最后一个磁贴 */
+  let firstRow = [], firstTop = Infinity
+  tiles.forEach(t => {
+    const top = t.getBoundingClientRect().top
+    if (top < firstTop - 2) { firstTop = top; firstRow = [t] }
+    else if (Math.abs(top - firstTop) < 2) firstRow.push(t)
+  })
+  const last = firstRow[firstRow.length - 1]
+  if (!last) return
+  const right = Math.max(0, window.innerWidth - last.getBoundingClientRect().right)
+  root.style.setProperty('--clock-right', right + 'px')
+})
+
 function onGearClick() {
-  if (ui.gearDragging) return
   ui.dropdownOpen = !ui.dropdownOpen
-}
-function onGearDragover(e) {
-  if (e.dataTransfer.types.includes('text/folder')) {
-    e.preventDefault(); e.dataTransfer.dropEffect = 'move'
-    e.currentTarget.classList.add('dragover')
-  }
-}
-function onGearDragleave(e) { e.currentTarget.classList.remove('dragover') }
-function onGearDrop(e) {
-  e.preventDefault()
-  const fid = e.dataTransfer.getData('text/folder')
-  if (fid) {
-    const f = state.folders.find(x => x.id === fid)
-    if (f) {
-      state.links.forEach(l => { if (l.folderId === fid) l.folderId = null })
-      state.folders = state.folders.filter(x => x.id !== fid)
-      save(); toast('已还原为设置图标')
-    }
-  }
-  e.currentTarget.classList.remove('dragover')
 }
 function openPanel(name) {
   ui.dropdownOpen = false
@@ -46,12 +39,11 @@ function openInstall() {
 <template>
   <!-- 顶部齿轮（仅快捷链接页显示） -->
   <div id="gearZone">
-    <button id="gearBtn" draggable="true"
+    <button id="gearBtn"
             :class="{ 'dropdown-open': ui.dropdownOpen }"
-            title="拖入快捷链接区可创建文件夹 · 文件夹拖回此处还原"
+            title="设置"
             aria-label="设置"
-            @click="onGearClick" @dragstart="onGearDragstart" @dragend="onGearDragend"
-            @dragover="onGearDragover" @dragleave="onGearDragleave" @drop="onGearDrop">
+            @click="onGearClick">
       <svg class="gear-svg gs-a" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
         <circle cx="12" cy="12" r="3"/>

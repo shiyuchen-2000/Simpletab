@@ -6,6 +6,20 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.5.1',
+    items: [
+      '新增设置左侧「悬浮目录」：窗口外纯文字导航，点击快速定位设置分组，滚动联动高亮',
+      '新增日期「农历」格式（1900-2100 查表）',
+      '新增「自动适配颜色」开关：按壁纸识别主色 / 次色，时间与日期分别着色，换壁纸自动调整',
+      '图标形状「超椭圆」改为「半圆角」对角异形，小图标下与圆形更易区分',
+      '优化折叠常用设置：新增时间格式 / 磁贴名称',
+      '优化时钟对齐：上 / 中 / 下位置的时间与日期居中对齐',
+      '优化：下拉列表打开时右上时钟左移避让，右边缘对齐磁贴第一排',
+      '修复：移除齿轮拖拽，解决偶发「点击设置无响应」',
+      '修复：设置目录滚动到底未高亮最后一个分组'
+    ]
+  },
+  {
     ver: 'v1.5.0',
     items: [
       '新增「无界」设计风格：磁贴去除卡片框与毛玻璃，仅保留图标与名称，搜索框保持玻璃背景',
@@ -164,7 +178,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.5.0</span>
+            <span class="am-chip">v1.5.1</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

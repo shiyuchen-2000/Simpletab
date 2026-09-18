@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme } from '../store'
+import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme, autoFitClockColors } from '../store'
 import { useGearModal } from '../store/useGearModal'
 
 /* 每个设置行的标签与描述，用于搜索过滤。分组按「改哪块」分区，实时预览固定顶部不在此列 */
@@ -33,6 +33,7 @@ const GROUPS = computed(() => [
       { id: 'date', title: '显示日期', desc: '在时间下方显示日期', keywords: ['显示日期', '日期', 'date'] },
       { id: 'dateFmt', title: '日期格式', desc: '日期显示样式', keywords: ['日期格式', '格式'] },
       { id: 'dateColor', title: '日期颜色', desc: '自定义日期文字颜色', keywords: ['日期颜色', '颜色'] },
+      { id: 'autoColor', title: '自动适配颜色', desc: '根据壁纸自动匹配时间/日期颜色（主色+次色），开启后不可手动调色', keywords: ['自动适配', '壁纸', '颜色', '主色', 'auto'] },
       { id: 'font', title: '时钟字体', desc: '从系统字体库中选择', keywords: ['时钟字体', '字体', 'font'] }
     ]
   },
@@ -40,7 +41,7 @@ const GROUPS = computed(() => [
     label: '磁贴设置',
     rows: [
       { id: 'density', title: '卡片密度', desc: '磁贴间距与大小', keywords: ['密度', '间距', '紧凑', '宽松', 'density'] },
-      { id: 'iconShape', title: '图标形状', desc: '磁贴与拓展坞图标的形状', keywords: ['图标形状', '形状', '方形', '圆形', '超椭圆', '圆角', 'icon', 'shape'] },
+      { id: 'iconShape', title: '图标形状', desc: '磁贴与拓展坞图标的形状', keywords: ['图标形状', '形状', '方形', '圆形', '半圆角', '圆角', 'icon', 'shape'] },
       { id: 'iconSize', title: '图标尺寸', desc: '图标大小，可手动覆盖卡片密度预设', keywords: ['图标尺寸', '图标大小', '大小', '尺寸', 'icon', 'size'] },
       { id: 'iconGlow', title: '图标光晕', desc: '图标底部光晕的强弱', keywords: ['图标光晕', '光晕', '阴影', '发光', 'glow'] },
       { id: 'tileText', title: '磁贴名称', desc: '始终显示 / 悬浮显示 / 不显示', keywords: ['磁贴名称', '名称', '文字', '隐藏', 'label', 'text'] },
@@ -72,8 +73,8 @@ const keywordMatch = (row, q) => {
   const text = (row.title + row.desc + row.keywords.join(' ')).toLowerCase()
   return q.split(/\s+/).every(k => text.includes(k))
 }
-/* 常用项 = 颜色 + 布局；其余样式 / 行为设置归入「个性化」，点按钮展开 */
-const BASIC_ROWS = new Set(['theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'pos', 'density', 'iconSize'])
+/* 常用项 = 外观 / 颜色 / 布局 / 磁贴名称；其余样式 / 行为设置归入「个性化」，点按钮展开 */
+const BASIC_ROWS = new Set(['theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'autoColor', 'pos', 'hour', 'density', 'iconSize', 'tileText'])
 /* 外观预设：一键应用整套外观（不涉及链接/文件夹），应用后仍可展开逐项细调 */
 const PRESETS = [
   {
@@ -154,13 +155,14 @@ const dateOptions = [
   ['cn-short', '2026-08-14 周五'],
   ['en-long', 'Friday, Aug 14, 2026'],
   ['numeric', '08/14 周五'],
-  ['weekday', '星期五']
+  ['weekday', '星期五'],
+  ['lunar', '农历八月初七']
 ]
 const dockCountOptions = [['3', '3'], ['5', '5'], ['7', '7']]
-const shapeOptions = [['rounded', '圆角'], ['square', '方形'], ['squircle', '超椭圆'], ['circle', '圆形']]
+const shapeOptions = [['rounded', '圆角'], ['square', '方形'], ['squircle', '半圆角'], ['circle', '圆形']]
 const tileTextOptions = [['always', '始终显示'], ['hover', '悬浮显示'], ['none', '不显示']]
 /* 开关行字段映射（state 里的布尔字段名） */
-const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine' }
+const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor' }
 /* Fluent 风格下固定的材质类设置项：在 CSS [data-style="fluent"] 块中被 Fluent 规范值覆盖，故置灰不可调 */
 const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
 const rowFixed = r => (state.style === 'fluent' || state.style === 'borderless') && FIXED_ROWS.includes(r.id)
@@ -209,12 +211,21 @@ const openInOptions = [['new', '新标签页'], ['self', '当前页']]
 function setOpenIn(v) { state.linkOpenIn = v; save() }
 
 function setHour(v) { state.hour12 = v === '12'; save() }
+/* 自动适配开关：开启立即重算并锁定手动调色；关闭恢复主题默认色 */
+const colorAutoFixed = r => state.autoColor && (r.id === 'clockColor' || r.id === 'dateColor')
 function setClockPos(v) { state.clockPos = v; save() }
 function setTheme(v) { state.theme = v; save() }
 function setStyle(v) { state.style = v; save() }
 function setDateFormat(v) { state.dateFormat = v; save() }
 function setDockCount(v) { state.dockCount = parseInt(v, 10); save() }
-function toggle(field) { state[field] = !state[field]; save() }
+function toggle(field) {
+  state[field] = !state[field]
+  if (field === 'autoColor') {
+    if (state.autoColor) autoFitClockColors()
+    else { state.clockColor = null; state.dateColor = null }
+  }
+  save()
+}
 function isDefault() {
   return Object.keys(DEFAULT_SETTINGS).every(k => state[k] === DEFAULT_SETTINGS[k])
 }
@@ -229,17 +240,56 @@ function onReset() {
   }
 }
 
+/* 左侧悬浮目录：当前分组 / 点击快速定位 / 滚动联动高亮 */
+const activeGroup = ref('')
+let navJumping = false, navJumpTimer = null   // 点击跳转动画期间锁定高亮，避免滚动联动中途覆盖
+function scrollToGroup(label) {
+  const sc = smScrollRef.value
+  if (!sc) return
+  const el = Array.from(sc.querySelectorAll('.set-group')).find(g => g.dataset.group === label)
+  if (!el) return
+  navJumping = true
+  const top = Math.max(0, el.offsetTop - sc.offsetTop - 10)
+  sc.scrollTop = top
+  activeGroup.value = label
+  clearTimeout(navJumpTimer)
+  navJumpTimer = setTimeout(() => { navJumping = false }, 600)
+}
+function onScrollNav() {
+  if (navJumping) return
+  const sc = smScrollRef.value
+  if (!sc) return
+  const groups = Array.from(sc.querySelectorAll('.set-group[data-group]'))
+  if (!groups.length) return
+  /* 滚动到底：高亮最后一个分组 */
+  if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2) {
+    activeGroup.value = groups[groups.length - 1].dataset.group
+    return
+  }
+  /* 常规：高亮可视区顶部所在的分组 */
+  const scTop = sc.getBoundingClientRect().top
+  let current = groups[0].dataset.group
+  for (const g of groups) {
+    if (g.getBoundingClientRect().top <= scTop + 8) current = g.dataset.group
+  }
+  activeGroup.value = current
+}
+
 /* ---------- 从设置按钮弹出 / 落回 ---------- */
 const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 </script>
 
 <template>
   <div class="modal-backdrop" :class="{ show: ui.modal === 'settings' && !closing, closing }" @click.self="closeModal">
-    <div class="modal settings-modal" ref="modalRef" :style="{ transformOrigin: modalOrigin }">
-      <div class="m-head">
-        <span class="m-title">常规设置</span>
-        <button class="m-close" @click="closeModal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-      </div>
+    <div class="sm-wrap">
+      <nav class="set-nav">
+        <button v-for="g in visibleRows" :key="'nav-' + g.label" type="button" :class="{ on: activeGroup === g.label }" @click="scrollToGroup(g.label)">{{ g.label }}</button>
+      </nav>
+      <div class="modal settings-modal" ref="modalRef" :style="{ transformOrigin: modalOrigin }">
+        <div class="m-head">
+          <span class="m-title">常规设置</span>
+          <button class="m-close" @click="closeModal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
 
       <!-- 设置搜索栏：输入即过滤，无按钮 -->
       <div class="set-search">
@@ -266,7 +316,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
       </div>
 
       <!-- 设置列表：独立滚动 -->
-      <div class="sm-scroll" ref="smScrollRef">
+      <div class="sm-scroll" ref="smScrollRef" @scroll="onScrollNav">
       <!-- 收起个性化：展开态置顶，随时可收起 -->
       <Transition name="pg">
         <button v-if="showPersonalized && !ui.searchFilter" class="personalize-btn" @click.stop="togglePersonalized">
@@ -289,7 +339,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
       </Transition>
       <!-- 分组渲染，按搜索过滤（展开 / 收起带过渡） -->
       <TransitionGroup name="pg" tag="div">
-        <div v-for="g in visibleRows" :key="g.label" class="set-group" :class="{ 'set-group-first': g === visibleRows[0] }">
+        <div v-for="g in visibleRows" :key="g.label" class="set-group" :data-group="g.label" :class="{ 'set-group-first': g === visibleRows[0] }">
           <div class="set-label">{{ g.label }}</div>
 
           <template v-for="r in g.rows" :key="r.id">
@@ -320,12 +370,12 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               </div>
             </div>
             <!-- 颜色行 -->
-            <div v-else-if="['clockColor','dateColor'].includes(r.id)" class="set-row">
+            <div v-else-if="['clockColor','dateColor'].includes(r.id)" class="set-row" :class="{ fixed: colorAutoFixed(r) }">
               <div><div class="r-t">{{ r.title }}</div><div class="r-d">{{ r.desc }}</div></div>
               <div class="color-row">
-                <input type="color" :value="r.id === 'clockColor' ? clockColorVal : dateColorVal"
+                <input type="color" :disabled="colorAutoFixed(r)" :value="r.id === 'clockColor' ? clockColorVal : dateColorVal"
                        @input="e => { state[r.id === 'clockColor' ? 'clockColor' : 'dateColor'] = e.target.value; save() }">
-                <button class="btn-mini" @click="() => { state[r.id === 'clockColor' ? 'clockColor' : 'dateColor'] = null; save(); toast('已恢复默认' + (r.id === 'clockColor' ? '时间' : '日期') + '颜色') }">默认</button>
+                <button class="btn-mini" :disabled="colorAutoFixed(r)" @click="() => { state[r.id === 'clockColor' ? 'clockColor' : 'dateColor'] = null; save(); toast('已恢复默认' + (r.id === 'clockColor' ? '时间' : '日期') + '颜色') }">默认</button>
               </div>
             </div>
             <!-- 透明度滑块 -->
@@ -513,11 +563,29 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
         </button>
       </div>
       </div><!-- /sm-scroll -->
-    </div>
+      </div><!-- /modal -->
+    </div><!-- /sm-wrap -->
   </div>
 </template>
 
 <style scoped>
+/* 左侧悬浮目录：位于弹窗外部左侧，无背景纯文字 */
+.sm-wrap{position:relative;display:flex;perspective:900px;}
+.settings-modal{display:flex;flex-direction:column;overflow:hidden;scroll-behavior:smooth;}
+.sm-scroll{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;}
+.set-nav{position:absolute;left:-124px;top:50%;transform:translateY(-50%);width:96px;display:flex;flex-direction:column;gap:20px;transition:transform .5s var(--ease);}
+/* 仅关闭按钮 hover 时目录沿 Z 轴上浮，离开落位；hover 目录本身/弹窗其他区域不触发，保证点击稳定；
+   节奏与弹窗 3D 动画联动（进入快 / 恢复舒缓） */
+.sm-wrap:has(.m-close:hover) .set-nav{transition:transform .3s var(--ease);transform:translateY(-50%) translateZ(20px);}
+.set-nav button{display:flex;align-items:center;justify-content:flex-end;gap:8px;border:none;background:none;text-align:right;padding:12px 6px;margin:-12px -6px;font-size:14px;color:var(--text-faint);cursor:pointer;white-space:nowrap;overflow:hidden;transition:color .2s;}
+.set-nav button::after{content:"";width:16px;height:1px;background:currentColor;opacity:.4;transition:width .2s var(--ease),opacity .2s;}
+.set-nav button:hover{color:var(--accent-text);}
+.set-nav button:hover::after,.set-nav button.on::after{width:22px;opacity:1;}
+.set-nav button.on{color:var(--accent-text);font-weight:600;}
+/* 亮色模式：目录文字用白色（带深色投影保证对比可读） */
+[data-theme="light"] .set-nav button{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);}
+[data-theme="light"] .set-nav button:hover,[data-theme="light"] .set-nav button.on{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45);}
+@media (max-width:760px){.set-nav{display:none;}}
 .set-search{
   display:flex;align-items:center;gap:.5rem;
   padding:.5rem .8rem;border-radius:12px;margin-bottom:.5rem;

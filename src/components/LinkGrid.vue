@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
-import { state, uid, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl } from '../store'
+import { state, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl } from '../store'
 import { faviconSrc } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
@@ -153,8 +153,7 @@ function onAreaDragover(e) {
   const types = e.dataTransfer.types
   const lid = types.includes('text/link')
   const fid = types.includes('text/folder')
-  const gear = types.includes('text/newfolder')
-  if (lid || fid || gear) {
+  if (lid || fid) {
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'
     if (lid || fid) showDropLine(e)
   }
@@ -163,12 +162,6 @@ function onAreaDrop(e) {
   e.preventDefault()
   const lid = e.dataTransfer.getData('text/link')
   const fid = e.dataTransfer.getData('text/folder')
-  const gear = e.dataTransfer.getData('text/newfolder')
-  if (gear) {
-    state.folders.push({ id: uid(), title: '新建文件夹' })
-    save(); toast('已创建文件夹 · 点击打开，标题可编辑')
-    clearDropFx(); return
-  }
   if (fid) {
     const f = state.folders.find(x => x.id === fid)
     if (f) {
