@@ -32,7 +32,7 @@ function onImgLoad(e) {
 
 <template>
   <div class="dock" :class="dockClass">
-    <div v-for="l in dockList" :key="l.id" class="dock-item" :title="l.title"
+    <div v-for="l in dockList" :key="l.id" class="dock-item" :data-ic="l.iconMode" :title="l.title"
          @click="openLink(l)" @contextmenu="onItemCtx($event, l)">
       <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            @error="onImgError" @load="onImgLoad">

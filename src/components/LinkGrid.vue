@@ -246,7 +246,7 @@ function dropIndex() {
          :class="{ dragging: draggingId === l.id }"
          @click="openLink(l)"
          @dragstart="onLinkDragstart($event, l.id)" @dragend="onDragend">
-      <div class="t-ico">
+      <div class="t-ico" :data-ic="l.iconMode">
         <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              @error="onTileImgError" @load="onTileImgLoad">
         <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
