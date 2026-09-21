@@ -28,6 +28,8 @@ function onGearClick() {
 }
 function openPanel(name) {
   ui.dropdownOpen = false
+  /* 打开任意设置面板时关闭新建/编辑链接弹窗，避免两个浮层叠加 */
+  ui.linkForm.visible = false
   ui.modal = name
 }
 /* 安装扩展：打开宣传页/下载页（新标签页） */

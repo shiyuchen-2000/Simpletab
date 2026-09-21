@@ -35,7 +35,7 @@ function swap(url, type) {
 }
 
 /* 视频壁纸体积上限 */
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024   // 50MB
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024   // 500MB（配合 unlimitedStorage）
 
 /* 视频有效性探测：能解析出元数据（时长/尺寸）才算有效，.txt 改名 .mp4 之类在此被拦下。
    探测用临时 objectURL 用后即 revoke，无泄漏 */
@@ -66,15 +66,15 @@ async function onFile(e) {
   e.target.value = ''
   if (!f) return
 
-  /* 视频分支：直接存原始 File（不重编码，与图片原图直存哲学一致），50MB 上限 + 元数据探测。
+  /* 视频分支：直接存原始 File（不重编码，与图片原图直存哲学一致），500MB 上限 + 元数据探测。
      保存失败绝不先 swap——否则内存态壁纸刷新即丢，且类型与落盘不一致 */
   if (f.type.startsWith('video/')) {
-    if (f.size > MAX_VIDEO_BYTES) { toast('视频壁纸不能超过 50MB', 'err'); return }
+    if (f.size > MAX_VIDEO_BYTES) { toast('视频壁纸不能超过 500MB', 'err'); return }
     try { await probeVideo(f) } catch (err) { toast('无法读取该视频文件，请换一个', 'err'); return }
     try { await saveWallpaperBlob(f) } catch (err) { toast('壁纸保存失败：文件过大或存储空间不足', 'err'); return }
     swap(URL.createObjectURL(f), 'video')
     save()
-    toast('视频壁纸已应用')
+    toast('视频壁纸已应用' + (f.size > 100 * 1024 * 1024 ? '（占用 ' + (f.size / 1024 / 1024).toFixed(0) + 'MB）' : ''))
     return
   }
 
@@ -129,7 +129,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('wallpaper')
         <video v-if="isVideoWallpaper" class="wp-preview-video" :src="state.wallpaper" muted autoplay loop playsinline></video>
         <span class="wp-tag">{{ isVideoWallpaper ? '当前视频壁纸' : '当前壁纸' }}</span>
       </div>
-      <p class="wp-desc">将您喜爱的图片或视频作为壁纸（视频不超过 50MB）</p>
+      <p class="wp-desc">将您喜爱的图片或视频作为壁纸（视频不超过 500MB）</p>
       <div class="wp-actions">
         <button class="btn btn-primary" @click="pick">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>

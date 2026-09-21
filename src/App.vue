@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
   <div class="bg" id="bg" :style="bgStyle">
     <video v-if="isVideoWallpaper" ref="bgVideo" class="bg-video"
       :autoplay="!reduceMotion && state.view === 'home'"
-      muted loop playsinline preload="auto" :src="state.wallpaper"
+      muted loop playsinline preload="metadata" :src="state.wallpaper"
       @loadeddata="syncVideoPlayback" @canplay="syncVideoPlayback"></video>
     <div class="bg-dim"></div>
     <div class="bg-vignette"></div>

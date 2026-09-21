@@ -1118,3 +1118,23 @@ body:not(.links-open) .dock.dock-visible{display:flex;}
 /* 设置下拉列表打开时，右上时钟左移避让（不消失）：右边缘对齐磁贴第一排最后一个图标；
    --clock-right 由 SettingsGear 动态计算，未计算时兜底左移 264px */
 body:has(.dropdown.show) #clockWrap[data-pos="right"]{right:var(--clock-right, calc(7vw + 264px));}
+
+/* ===== 无界：拓展坞移到搜索框下方，水平对齐跟随时钟位置（即搜索框对齐） ===== */
+[data-style="borderless"] .dock{bottom:auto;max-width:calc(100vw - 48px);}
+/* 居中位置：dock 与搜索框同轴居中，垂直在搜索框下方 */
+[data-style="borderless"] body.clock-pos-top .dock{top:calc(28vh + 58px + 26px);left:50%;transform:translateX(-50%);}
+[data-style="borderless"] body.clock-pos-mid .dock{top:calc(55vh + 58px + 26px);left:50%;transform:translateX(-50%);}
+/* 左上 / 右上：dock 与搜索框同侧对齐（8vw 边距），垂直在搜索框下方 */
+[data-style="borderless"] body.clock-pos-left .dock{top:calc(32vh + 58px + 26px);left:8vw;transform:none;justify-content:flex-start;}
+[data-style="borderless"] body.clock-pos-right .dock{top:calc(32vh + 58px + 26px);right:8vw;transform:none;justify-content:flex-end;}
+/* 底部时钟位置：搜索框本就靠底，dock 保持底部定位不动 */
+
+/* 无界：添加/编辑链接表单更不透明，避免与背景图标混合 */
+[data-style="borderless"] .overlay-form{background:rgba(255,255,255,.94);}
+[data-theme="dark"][data-style="borderless"] .overlay-form{background:rgba(10,17,26,.95);}
+
+/* 无界：时钟宽度与「缩短状态」的搜索框一致（min(400px,78vw)），上下成列对齐 */
+[data-style="borderless"] #clockWrap{width:min(400px,78vw);}
+
+/* 无界：底部时钟位置时，dock 定位在搜索框上方（此前 bottom:auto 未给位置会跑到页面顶部） */
+[data-style="borderless"] body.clock-pos-bottom .dock{top:calc(100vh - 6vh - 58px - 92px);left:50%;transform:translateX(-50%);}

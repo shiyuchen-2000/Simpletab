@@ -9,7 +9,8 @@
     "newtab": "index.html"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "https://www.google.com/*",
