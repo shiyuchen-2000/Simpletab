@@ -7,6 +7,10 @@ import LetterIco from './LetterIco.vue'
 const areaRef = ref(null)
 const draggingId = ref(null)
 const dragInFid = ref(null)
+const dropTargetIdx = ref(-1)   // 拖拽目标插入位（B：拖动中记录，松手时按此换位落位）
+/* 透明拖拽镜像：隐藏浏览器默认 drag image，避免与被拖图标实时移动造成"双层" */
+const emptyDragImage = new Image()
+emptyDragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 const rootLinks = computed(() => state.links.filter(l => l && typeof l === 'object' && !l.folderId))
 const folderLinks = fid => state.links.filter(l => l && typeof l === 'object' && l.folderId === fid)
@@ -41,18 +45,45 @@ function miniStyle(l) {
   return f ? { backgroundImage: `url("${f}")` } : {}
 }
 
-/* ---------- 拖拽 ---------- */
+/* ---------- 拖拽（实时换位：拖动中其他图标让位，松手落位，拖出恢复原状） ---------- */
+let originalOrder = []   // 拖拽前顺序快照（links 或 folders）
+let dropped = false      // 本次拖拽是否已落位
+let lastMoveTime = 0
+let lastLinkTarget = -1
+let lastFolderTarget = -1
+function snapshotOrder() {
+  originalOrder = draggingId.value?.startsWith('f:')
+    ? state.folders.map(x => x.id)
+    : state.links.map(x => x.id)
+}
 function onLinkDragstart(e, id) {
   e.dataTransfer.setData('text/link', id)
   e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setDragImage(emptyDragImage, 0, 0)
+  e.currentTarget.classList.add('dragging')
   draggingId.value = id
+  dropped = false; lastLinkTarget = -1; lastFolderTarget = -1; lastMoveTime = 0
+  snapshotOrder()
 }
 function onFolderDragstart(e, fid) {
   e.dataTransfer.setData('text/folder', fid)
   e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setDragImage(emptyDragImage, 0, 0)
+  e.currentTarget.classList.add('dragging')
   draggingId.value = 'f:' + fid
+  dropped = false; lastLinkTarget = -1; lastFolderTarget = -1; lastMoveTime = 0
+  snapshotOrder()
 }
-function onDragend() {
+function restoreOrder() {
+  if (draggingId.value?.startsWith('f:')) {
+    state.folders = originalOrder.map(id => state.folders.find(x => x.id === id)).filter(Boolean)
+  } else {
+    state.links = originalOrder.map(id => state.links.find(x => x.id === id)).filter(Boolean)
+  }
+}
+function onDragend(e) {
+  if (!dropped) restoreOrder()   // 拖出区域 / 取消：图标恢复原状
+  if (e.currentTarget) e.currentTarget.classList.remove('dragging')
   draggingId.value = null
   dragInFid.value = null
   clearDropFx()
@@ -66,6 +97,7 @@ function onFolderDragover(e, fid) {
 function onFolderDragleave() { dragInFid.value = null }
 function onFolderDrop(e, fid) {
   e.preventDefault()
+  dropped = true
   dragInFid.value = null
   const lid = e.dataTransfer.getData('text/link')
   if (lid) {
@@ -90,15 +122,7 @@ function onFolderDrop(e, fid) {
     }
   }
 }
-/* ---------- 区域放置：链接排序 / 文件夹排序 / 齿轮建文件夹 ---------- */
-let dropLine = null
-function ensureDropLine() {
-  if (!dropLine) {
-    dropLine = document.createElement('div')
-    dropLine.style.cssText = 'width:2px;background:var(--accent);border-radius:2px;align-self:stretch;'
-  }
-  return dropLine
-}
+/* ---------- 区域放置：拖拽换位（B：拖动中记录目标位，松手一次性落位 + 动画） ---------- */
 // 在 flex-wrap 磁贴中，按"先定位行、再定位列"计算插入索引，避免跨行误判
 function computeInsertIndex(container, clientX, clientY) {
   const all = [...container.querySelectorAll('.tile:not(.add)')]
@@ -129,25 +153,12 @@ function computeInsertIndex(container, clientX, clientY) {
   }
   return { tiles: all, index }
 }
-function showDropLine(e) {
-  const line = ensureDropLine()
-  if (line.parentNode) line.remove()
-  const area = areaRef.value
-  const { tiles, index: raw } = computeInsertIndex(area, e.clientX, e.clientY)
-  // 文件夹磁贴恒排在最前：文件夹拖拽的落点限制在文件夹区内
-  const index = draggingId.value?.startsWith('f:') ? Math.min(raw, state.folders.length) : raw
-  line.dataset.idx = index
-  const addTile = area.querySelector('.tile.add')
-  if (index >= tiles.length) area.insertBefore(line, addTile)
-  else area.insertBefore(line, tiles[index])
-}
 function clearDropFx() {
-  if (dropLine && dropLine.parentNode) dropLine.remove()
-  dropLine = null
+  dropTargetIdx.value = -1
   document.querySelectorAll('.drag-in').forEach(x => x.classList.remove('drag-in'))
 }
-// 组件卸载时清理拖拽过程中可能遗留的游离指示线节点
-onBeforeUnmount(() => { if (dropLine && dropLine.parentNode) dropLine.remove(); dropLine = null })
+// 组件卸载时清理拖拽状态
+onBeforeUnmount(clearDropFx)
 
 function onAreaDragover(e) {
   const types = e.dataTransfer.types
@@ -155,70 +166,83 @@ function onAreaDragover(e) {
   const fid = types.includes('text/folder')
   if (lid || fid) {
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'
-    if (lid || fid) showDropLine(e)
+    if (lid) moveDraggingLink(e.clientX, e.clientY)
+    else if (fid) moveDraggingFolder(e.clientX, e.clientY)
   }
+}
+/* 实时换位：拖动中把被拖链接移到鼠标目标位，其余图标即时让位（TransitionGroup 平滑动画） */
+function moveDraggingLink(clientX, clientY) {
+  const now = Date.now()
+  if (now - lastMoveTime < 50) return
+  lastMoveTime = now
+  const area = areaRef.value?.$el
+  const id = draggingId.value
+  if (!area || !id) return
+  const { index: raw } = computeInsertIndex(area, clientX, clientY)
+  if (raw === lastLinkTarget) return
+  lastLinkTarget = raw
+  const l = state.links.find(x => x.id === id)
+  if (!l) return
+  const visualTiles = [...area.querySelectorAll('.tile:not(.add)')]
+  const cur = visualTiles.findIndex(t => t.dataset.id === id)
+  let vi = raw
+  if (cur !== -1 && cur < vi) vi--
+  let folderBefore = 0
+  for (let i = 0; i < Math.min(vi, visualTiles.length); i++) {
+    if (visualTiles[i].classList.contains('folder-tile')) folderBefore++
+  }
+  let list = state.links.filter(x => !x.folderId)
+  const oi = list.findIndex(x => x.id === id)
+  if (oi > -1) list.splice(oi, 1)
+  const t = Math.max(0, Math.min(vi - folderBefore, list.length))
+  list.splice(t, 0, l)
+  state.links = [
+    ...state.links.filter(x => x.folderId),
+    ...list.map(x => x.id).map(id => state.links.find(x => x.id === id)).filter(Boolean)
+  ]
+}
+/* 实时换位：文件夹（恒排最前） */
+function moveDraggingFolder(clientX, clientY) {
+  const now = Date.now()
+  if (now - lastMoveTime < 50) return
+  lastMoveTime = now
+  const area = areaRef.value?.$el
+  const fid = draggingId.value?.slice(2)
+  if (!area || !fid) return
+  const { index: raw } = computeInsertIndex(area, clientX, clientY)
+  const target = Math.min(raw, state.folders.length)
+  if (target === lastFolderTarget) return
+  lastFolderTarget = target
+  const f = state.folders.find(x => x.id === fid)
+  if (!f) return
+  const oi = state.folders.findIndex(x => x.id === fid)
+  let t = target
+  if (t > oi) t -= 1
+  const others = state.folders.filter(x => x.id !== fid)
+  others.splice(Math.max(0, Math.min(t, others.length)), 0, f)
+  state.folders = others
 }
 function onAreaDrop(e) {
   e.preventDefault()
+  dropped = true
   const lid = e.dataTransfer.getData('text/link')
   const fid = e.dataTransfer.getData('text/folder')
-  if (fid) {
-    const f = state.folders.find(x => x.id === fid)
-    if (f) {
-      // 文件夹磁贴恒排在最前：把视觉插入索引换算成文件夹数组索引
-      const L = state.folders.length
-      const oi = state.folders.findIndex(x => x.id === fid)
-      let t = Math.max(0, Math.min(dropIndex(), L))
-      if (t > oi) t -= 1
-      const others = state.folders.filter(x => x.id !== fid)
-      others.splice(t, 0, f)
-      state.folders = others
-      save()
-    }
-    clearDropFx(); return
-  }
   if (lid) {
     const l = state.links.find(x => x.id === lid)
     if (!l) { clearDropFx(); return }
-    const oldFid = l.folderId
-    l.folderId = null
-    if (oldFid) pruneEmptyFolders()
-    // 视觉索引是按"文件夹 + 根链接"的 DOM 顺序，需换算成根链接数组中的真实位置
-    const area = areaRef.value
-    const visualTiles = area ? [...area.querySelectorAll('.tile:not(.add)')] : []
-    let visualIdx = dropIndex()
-    // 统计插入位置之前有多少个文件夹磁贴，并把被拖链接自身从计数中剔除
-    let folderBefore = 0
-    for (let i = 0; i < Math.min(visualIdx, visualTiles.length); i++) {
-      if (visualTiles[i].classList.contains('folder-tile')) folderBefore++
-    }
-    // 被拖磁贴拖动时仍在 DOM 中：若它位于插入点之前，移除后序列整体左移一位，
-    // 视觉索引需同步减 1，否则向右拖动会多移一位（文件夹分支已有同样的 t-=1 处理）
-    const oiVisual = visualTiles.findIndex(t => t.dataset.id === lid)
-    if (oiVisual !== -1 && oiVisual < visualIdx) visualIdx--
-    let list = state.links.filter(x => !x.folderId)
-    const oi = list.findIndex(x => x.id === lid)
-    if (oi > -1) list.splice(oi, 1)
-    const target = Math.max(0, Math.min(visualIdx - folderBefore, list.length))
-    list.splice(target, 0, l)
-    const rootIds = list.map(x => x.id)
-    state.links = [
-      ...state.links.filter(x => x.folderId),
-      ...rootIds.map(id => state.links.find(x => x.id === id)).filter(Boolean)
-    ]
+    // 顺序已在拖动中实时排好；若从文件夹拖出则移出文件夹
+    if (l.folderId) { l.folderId = null; pruneEmptyFolders() }
     save()
+  } else if (fid) {
+    save()   // 文件夹顺序已实时排好
   }
   clearDropFx()
-}
-function dropIndex() {
-  if (!dropLine) return 0
-  return parseInt(dropLine.dataset.idx, 10) || 0
 }
 
 </script>
 
 <template>
-  <div class="link-area" id="linkArea" ref="areaRef"
+  <TransitionGroup tag="div" name="tile" class="link-area" id="linkArea" ref="areaRef"
        @dragover="onAreaDragover" @drop="onAreaDrop">
 
     <!-- 文件夹磁贴 -->
@@ -255,10 +279,10 @@ function dropIndex() {
     </div>
 
     <!-- 添加入口 -->
-    <div class="tile add" @click.stop="openAddForm($event.currentTarget)">
+    <div class="tile add" key="add" @click.stop="openAddForm($event.currentTarget)">
       <div class="plus">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </div>
     </div>
-  </div>
+  </TransitionGroup>
 </template>

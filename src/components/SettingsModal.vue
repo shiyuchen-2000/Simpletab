@@ -1,6 +1,6 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue'
-import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme, autoFitClockColors } from '../store'
+import { computed, nextTick, ref, watch } from 'vue'
+import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme, autoFitClockColors, saveCurrentAsPreset } from '../store'
 import { useGearModal } from '../store/useGearModal'
 
 /* 每个设置行的标签与描述，用于搜索过滤。分组按「改哪块」分区，实时预览固定顶部不在此列 */
@@ -122,6 +122,59 @@ function applyPreset(p) {
   Object.assign(state, p.settings)
   save()
   toast('已应用「' + p.name + '」外观预设')
+}
+
+/* ---------- 自定义预设（右侧滑出面板，保存/删除，默认预设不可删） ---------- */
+const presetPanelOpen = ref(false)
+const findOpt = (arr, key) => { const x = arr.find(a => a[0] === key); return x ? x[1] : '' }
+const presetPanelRows = computed(() => [
+  { label: '外观', value: findOpt(themeOptions, state.theme) },
+  { label: '风格', value: findOpt(styleOptions, state.style) },
+  { label: '主题色', value: state.accentColor || '默认' },
+  { label: '时间格式', value: state.hour12 ? '12 小时' : '24 小时' },
+  { label: '时钟位置', value: findOpt(posOptions, state.clockPos) },
+  { label: '日期格式', value: state.dateFormat === 'lunar' ? '农历' : findOpt(dateOptions, state.dateFormat) },
+  { label: '卡片密度', value: findOpt(densityOptions, state.tileDensity) },
+  { label: '图标形状', value: findOpt(shapeOptions, state.iconShape) },
+  { label: '磁贴名称', value: findOpt(tileTextOptions, state.tileText) },
+  { label: '搜索动画', value: findOpt(searchAnimOptions, state.searchAnim) },
+  { label: '拓展坞', value: state.dockEnabled ? '显示' : '隐藏' }
+])
+const presetName = ref('')
+const presetDesc = ref('')
+function openPresetPanel() {
+  presetName.value = '自定义' + (state.customPresets.length + 1)
+  presetDesc.value = ''
+  presetPanelOpen.value = true
+}
+const panelClosing = ref(false)
+/* 关闭设置弹窗时，预设侧窗同步关闭 */
+watch(() => ui.modal, v => { if (v !== 'settings') { presetPanelOpen.value = false; panelClosing.value = false } })
+function closePresetPanel() {
+  panelClosing.value = true
+  /* 关闭：分条逐条收起（第一条先消失，依次收起），面板最后淡出 */
+  const panel = document.querySelector('.preset-panel')
+  if (panel) {
+    const items = panel.querySelectorAll('.pp-item')
+    items.forEach((el, i) => { el.style.animationDelay = (i * 45) + 'ms' })
+  }
+  setTimeout(() => { panelClosing.value = false; presetPanelOpen.value = false }, 760)
+}
+function savePreset() {
+  saveCurrentAsPreset(presetName.value.trim() || '自定义' + (state.customPresets.length + 1), presetDesc.value.trim())
+  presetPanelOpen.value = false
+  toast('已保存为自定义预设')
+}
+function askDeletePreset(p) {
+  ui.confirm.kind = 'preset'
+  ui.confirm.presetId = p.id
+  ui.confirm.title = '删除这个预设？'
+  ui.confirm.desc = '删除后不可恢复'
+  ui.confirm.visible = true
+}
+function presetTime(t) {
+  const d = new Date(t)
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 let initPersonalized = false
 try { initPersonalized = localStorage.getItem('simpletab_personalized') === '1' } catch (e) { /* ignore */ }
@@ -334,7 +387,15 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               <span class="preset-name">{{ p.name }}</span>
               <span class="preset-desc">{{ p.desc }}</span>
             </button>
+            <div v-for="(p, i) in state.customPresets" :key="p.id" class="preset-card cp" @click="applyPreset({ name: p.name || '自定义' + (i + 1), settings: p.settings })">
+              <span class="preset-name">{{ p.name || '自定义' + (i + 1) }}</span>
+              <span class="preset-desc">{{ p.desc || presetTime(p.time) }}</span>
+              <button class="pd-del" title="删除预设" @click.stop="askDeletePreset(p)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
           </div>
+          <button class="preset-add" @click="openPresetPanel">+ 添加现有设置到预设</button>
         </div>
       </Transition>
       <!-- 分组渲染，按搜索过滤（展开 / 收起带过渡） -->
@@ -564,6 +625,28 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
       </div>
       </div><!-- /sm-scroll -->
       </div><!-- /modal -->
+
+      <!-- 自定义预设：右侧滑出面板（透明无边框，分条动画加载） -->
+      <div class="preset-panel" v-if="presetPanelOpen" :class="{ closing: panelClosing }">
+        <div class="pp-head">
+          <span class="pp-title">当前设置</span>
+          <button class="pp-close" title="关闭" @click="closePresetPanel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+        </div>
+        <div class="pp-fields">
+          <input v-model="presetName" class="pp-input" placeholder="预设名称" maxlength="20" spellcheck="false">
+          <input v-model="presetDesc" class="pp-input" placeholder="预设描述（可选）" maxlength="40" spellcheck="false">
+        </div>
+        <div class="pp-list">
+          <div v-for="(it, idx) in presetPanelRows" :key="it.label" class="pp-item" :style="{ animationDelay: (idx * 70) + 'ms' }">
+            <span>{{ it.label }}</span><b>{{ it.value }}</b>
+          </div>
+        </div>
+        <div class="pp-save">
+          <button class="btn btn-primary" @click="savePreset">保存当前预设</button>
+        </div>
+      </div>
     </div><!-- /sm-wrap -->
   </div>
 </template>
@@ -634,6 +717,47 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 .preset-card:hover{background:rgba(var(--accent-rgb),.12);border-color:rgba(var(--accent-rgb),.5);transform:translateY(-1px);}
 .preset-name{font-size:.88rem;font-weight:600;color:var(--text);}
 .preset-desc{font-size:.72rem;color:var(--text-faint);line-height:1.35;}
+/* 自定义预设：删除按钮（hover 浮现，二次确认后删除） */
+.preset-card.cp{position:relative;cursor:pointer;}
+.preset-card .pd-del{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#ff8a94;background:rgba(231,76,86,.1);border:none;cursor:pointer;opacity:0;transition:opacity .2s;}
+.preset-card:hover .pd-del{opacity:1;}
+.preset-card .pd-del:hover{background:rgba(231,76,86,.22);}
+.preset-add{margin-top:.8rem;width:100%;padding:.6rem;border-radius:11px;font-size:.86rem;color:var(--accent-text);background:var(--glass-soft);border:1px dashed var(--glass-border);cursor:pointer;transition:background .2s,border-color .2s;}
+.preset-add:hover{background:rgba(var(--accent-rgb),.12);border-color:rgba(var(--accent-rgb),.5);}
+
+/* 右侧面板：透明无边框，内容分条动画加载 */
+.preset-panel{position:absolute;left:calc(100% + 20px);top:0;bottom:0;width:250px;z-index:5;display:flex;flex-direction:column;pointer-events:auto;transition:transform .3s var(--ease);}
+/* 主面板关闭按钮 hover：预设侧拉栏沿 Z 轴上浮（与左侧目录联动一致） */
+.sm-wrap:has(.m-close:hover) .preset-panel{transform:translateZ(24px);}
+.pp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;}
+.pp-title{font-size:.78rem;letter-spacing:.14em;color:var(--text-faint);}
+.pp-fields{display:flex;flex-direction:column;gap:8px;margin-bottom:.7rem;}
+.pp-input{width:100%;padding:.5rem .7rem;border-radius:10px;font-size:.85rem;color:var(--text);background:var(--glass-soft);border:1px solid var(--glass-border);outline:none;transition:border-color .2s;box-sizing:border-box;}
+.pp-input:focus{border-color:rgba(var(--accent-rgb),.55);}
+.pp-input::placeholder{color:var(--text-faint);}
+.pp-close{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--text-dim);background:rgba(255,255,255,.06);border:none;cursor:pointer;transition:background .2s,color .2s,transform .2s;}
+.pp-close:hover{background:rgba(231,76,86,.15);color:#ff8a94;transform:scale(1.06);}
+/* 点击关闭：分条逐条收起（淡出 + 微缩），面板最后整体淡出 */
+.preset-panel.closing{animation:ppOutPanel .2s var(--ease) .6s forwards;}
+@keyframes ppOutPanel{to{opacity:0}}
+.preset-panel.closing .pp-item{animation:ppOutItem .18s var(--ease) backwards;}
+@keyframes ppOutItem{from{opacity:1;transform:none}to{opacity:0;transform:translateX(-14px)}}
+.pp-item{display:flex;justify-content:space-between;align-items:center;padding:.42rem 0;font-size:.85rem;color:var(--text);opacity:0;animation:ppIn .35s var(--ease) forwards;}
+.pp-item span{color:var(--text-dim);}
+.pp-item b{font-weight:600;color:var(--accent-text);max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 分条从左到右逐条展示（从左侧滑入，不经过 modal 右缘，避免边缘光晕） */
+@keyframes ppIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.pp-save{padding-top:1rem;}
+.pp-save .btn{width:100%;justify-content:center;}
+/* 亮色模式：侧拉面板文字用白色（面板为透明底） */
+[data-theme="light"] .preset-panel .pp-title{color:rgba(255,255,255,.78);}
+[data-theme="light"] .preset-panel .pp-item{color:#fff;}
+[data-theme="light"] .preset-panel .pp-item span{color:rgba(255,255,255,.88);}
+[data-theme="light"] .preset-panel .pp-item b{color:#fff;}
+[data-theme="light"] .preset-panel .pp-input{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);}
+[data-theme="light"] .preset-panel .pp-input::placeholder{color:rgba(255,255,255,.55);}
+/* 侧面板打开时：设置弹窗右侧边框泛主题色光晕 */
+.sm-wrap:has(.preset-panel) .settings-modal{box-shadow:0 24px 70px rgba(0,0,0,.4), 10px 0 34px rgba(var(--accent-rgb),.32);}
 /* Fluent 风格下材质类设置固定：置灰不可交互 */
 .set-row.fixed{opacity:.5;}
 .set-row.fixed input[type="range"],.set-row.fixed input[type="color"],.set-row.fixed .switch,.set-row.fixed .btn-mini{cursor:not-allowed;}

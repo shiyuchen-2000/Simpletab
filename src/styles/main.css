@@ -1142,3 +1142,6 @@ body:has(.dropdown.show) #clockWrap[data-pos="right"]{right:var(--clock-right, c
 /* 自适应(auto)图标：字母兜底背景亮色=白、暗色=黑，让透明 favicon 更协调；text 模式保留品牌渐变 */
 [data-theme="light"] .tile .t-ico[data-ic="auto"], [data-theme="light"] .dock-item[data-ic="auto"]{background:#fff;color:#1a2b30;box-shadow:0 6px 16px rgba(13,43,46,.12);}
 [data-theme="dark"] .tile .t-ico[data-ic="auto"], [data-theme="dark"] .dock-item[data-ic="auto"]{background:#0b0f14;color:#eef4ff;box-shadow:0 6px 16px rgba(0,0,0,.35);}
+
+/* 拖拽换位动画（TransitionGroup move）：磁贴位置变化平滑过渡 */
+.tile-move{transition:transform .32s var(--ease) !important;}

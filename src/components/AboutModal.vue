@@ -6,6 +6,19 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上，逐条简洁列出 */
 const CHANGES = [
   {
+    ver: 'v1.6.0',
+    items: [
+      '新增自定义外观预设：将当前设置一键保存为预设（可命名与描述），支持应用与删除（二次确认），默认预设不可删',
+      '新增预设管理侧滑面板：分条动画加载、名称/描述输入、随主面板关闭按钮联动',
+      '图标拖拽改为「实时换位」：拖动中其他图标即时让位，松手落位，拖出自动恢复原状',
+      '视频壁纸上限提升至 500MB（unlimitedStorage），并改为流式解码降低内存',
+      '自适应图标字母兜底背景按主题：亮色白底 / 暗色黑底，透明图标更协调',
+      '修复：设置弹窗偶发打不开（watch 导入缺失）',
+      '修复：文件夹切换时短暂闪现上一个文件夹（改为同步渲染）',
+      '修复：移除齿轮拖拽，解决点击设置偶发无响应'
+    ]
+  },
+  {
     ver: 'v1.5.1',
     items: [
       '新增设置左侧「悬浮目录」：窗口外纯文字导航，点击快速定位设置分组，滚动联动高亮',
@@ -178,7 +191,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.5.1</span>
+            <span class="am-chip">v1.6.0</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

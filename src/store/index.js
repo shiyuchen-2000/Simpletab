@@ -85,7 +85,7 @@ const DEFAULTS = {
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true, tileEnter: 'drop', folderAnim: 'flip',
   wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', dockOpacity: 0.72,
-  links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS
+  links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS, customPresets: []
 }
 
 /* 默认设置快照（用于重置） */
@@ -277,7 +277,8 @@ export function applySaved(saved) {
     searchAnim: saved.searchAnim ?? state.searchAnim,
     dockOpacity: saved.dockOpacity ?? state.dockOpacity,
     links: saved.links ?? state.links,
-    folders: saved.folders ?? state.folders
+    folders: saved.folders ?? state.folders,
+    customPresets: saved.customPresets ?? state.customPresets
   })
 }
 /* 启动时本地无数据时，延迟重试从 sync 恢复（等待账号云同步重新拉取） */
@@ -308,7 +309,7 @@ const ui = reactive({
   flip: false,
   linkForm: { visible: false, mode: 'add', id: null, url: '', name: '', batch: false, batchText: '', folderSel: '', newFolder: '', err: '', top: 0, left: 0 },
   ctxMenu: { visible: false, x: 0, y: 0, items: [], linkId: null, inFolder: false },
-  confirm: { visible: false, title: '', desc: '', kind: null, linkId: null, folderId: null, dockId: null },
+  confirm: { visible: false, title: '', desc: '', kind: null, linkId: null, folderId: null, dockId: null, presetId: null },
   folderOpenId: null,
   folderClosing: false,
   toast: { visible: false, msg: '', err: false },
@@ -807,9 +808,33 @@ export function confirmOk() {
       if (fid) pruneEmptyFolders()
     }
     toast('已删除')
+  } else if (c.kind === 'preset') {
+    deletePreset(c.presetId)
+    toast('预设已删除')
   }
   c.visible = false
   save()
+}
+
+/* ---------- 自定义预设 ---------- */
+/* 外观相关字段（保存当前设置为自定义预设） */
+const PRESET_FIELDS = [
+  'theme', 'style', 'accentColor', 'glassStrength', 'glassShine', 'cardRadius', 'tileDensity',
+  'searchRadius', 'searchOpacity', 'dockOpacity', 'iconShape', 'iconSize', 'iconGlow', 'tileHoverLift',
+  'tileText', 'searchAnim', 'tileEnter', 'folderAnim', 'hour12', 'clockPos', 'clockColor', 'dateColor',
+  'dateFormat', 'showDate', 'showSeconds', 'blink', 'clockFont', 'wallpaperVignette', 'dockEnabled', 'dockCount', 'linkOpenIn'
+]
+/* 保存当前设置快照为自定义预设（name/desc 可空，渲染时回退默认） */
+export function saveCurrentAsPreset(name = '', desc = '') {
+  const settings = {}
+  for (const k of PRESET_FIELDS) settings[k] = state[k]
+  const id = uid()
+  state.customPresets.push({ id, settings, time: Date.now(), name, desc })
+  save()
+  return id
+}
+export function deletePreset(id) {
+  state.customPresets = state.customPresets.filter(p => p.id !== id)
 }
 export function confirmCancel() { ui.confirm.visible = false }
 
@@ -1088,7 +1113,7 @@ function buildSnapshot() {
     glassStrength: state.glassStrength, cardRadius: state.cardRadius, tileDensity: state.tileDensity, linkOpenIn: state.linkOpenIn, searchRadius: state.searchRadius,
     iconShape: state.iconShape, iconSize: state.iconSize, iconGlow: state.iconGlow, tileHoverLift: state.tileHoverLift, tileText: state.tileText, glassShine: state.glassShine, tileEnter: state.tileEnter, folderAnim: state.folderAnim,
     wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, searchAnim: state.searchAnim, dockOpacity: state.dockOpacity,
-    links: state.links, folders: state.folders
+    links: state.links, folders: state.folders, customPresets: state.customPresets
   }
 }
 export function save() {

@@ -5,9 +5,14 @@ import { faviconSrc } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 // 展示中的文件夹：打开时更新；关闭后保留引用直到退出动画结束，避免 v-if 立即卸载导致无动画
-const displayFolder = ref(null)
-const folder = computed(() => displayFolder.value)
-const links = computed(() => displayFolder.value ? state.links.filter(l => l.folderId === displayFolder.value.id) : [])
+const displayFolder = ref(null)   // 仅用于关闭动画期间保留旧文件夹
+/* 打开时同步取当前文件夹（避免异步 watch 更新造成先渲染旧文件夹一帧）；
+   关闭后回退到 displayFolder（保留关闭动画内容） */
+const folder = computed(() => {
+  if (ui.folderOpenId) return state.folders.find(f => f.id === ui.folderOpenId) || null
+  return displayFolder.value
+})
+const links = computed(() => folder.value ? state.links.filter(l => l.folderId === folder.value.id) : [])
 const editing = ref(false)
 const editTitle = ref('')
 const gridRef = ref(null)
@@ -18,7 +23,7 @@ const panelOrigin = ref('50% 50%')
 watch(() => ui.folderOpenId, async (id) => {
   editing.value = false
   if (!id) return
-  displayFolder.value = state.folders.find(f => f.id === id) || null
+  // 打开时 folder 已由 computed 同步取当前文件夹，这里只需更新展开锚点
   const tile = document.querySelector(`.folder-tile[data-fid="${id}"]`)
   if (!tile) { panelOrigin.value = '50% 50%'; return }
   const r = tile.getBoundingClientRect()
@@ -28,14 +33,10 @@ watch(() => ui.folderOpenId, async (id) => {
   const pr = panelRef.value ? panelRef.value.getBoundingClientRect() : null
   panelOrigin.value = pr ? `${cx - pr.left}px ${cy - pr.top}px` : '50% 50%'
 })
-// 标题在打开期间被改名时同步
-watch(() => displayFolder.value && state.folders.find(f => f.id === displayFolder.value.id)?.title, (title) => {
-  if (displayFolder.value && title != null) displayFolder.value = { ...displayFolder.value, title }
-})
-// 关闭动画结束后再卸载面板内容
+// 动画结束后清掉 displayFolder（打开时 folder 走 folderOpenId，仅关闭动画回退用 displayFolder）
 function onAnimationEnd(e) {
   if (e.target !== e.currentTarget) return
-  if (ui.folderClosing && !ui.folderOpenId) displayFolder.value = null
+  displayFolder.value = null
 }
 
 function startEdit() { editing.value = true; editTitle.value = folder.value?.title || '' }
@@ -44,14 +45,36 @@ function commitEdit() {
   editing.value = false
 }
 
-/* ---------- 文件夹内拖拽排序 ---------- */
-let dropLine = null
-function ensureDropLine() {
-  if (!dropLine) {
-    dropLine = document.createElement('div')
-    dropLine.style.cssText = 'width:2px;background:var(--accent);border-radius:2px;align-self:stretch;'
+/* ---------- 文件夹内拖拽排序（实时换位：拖动中让位，松手落位，拖出恢复） ---------- */
+let folderDragId = null
+let folderDragOrder = []
+let folderDropped = false
+let folderLastMove = 0
+let folderLastTarget = -1
+/* 透明拖拽镜像：隐藏浏览器默认 drag image，避免"双层"图标 */
+const folderEmptyImg = new Image()
+folderEmptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+function startFolderLinkDrag(e, l) {
+  e.dataTransfer.setData('text/link', l.id)
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setDragImage(folderEmptyImg, 0, 0)
+  folderDragId = l.id
+  folderDropped = false
+  folderLastTarget = -1; folderLastMove = 0
+  folderDragOrder = state.links.filter(x => x.folderId === ui.folderOpenId).map(x => x.id)
+  e.currentTarget.classList.add('dragging')
+}
+function endFolderLinkDrag(e) {
+  e.currentTarget.classList.remove('dragging')
+  if (!folderDropped && ui.folderOpenId) {
+    // 拖出/取消：恢复文件夹内顺序
+    state.links = [
+      ...state.links.filter(x => x.folderId !== ui.folderOpenId),
+      ...folderDragOrder.map(id => state.links.find(x => x.id === id)).filter(Boolean)
+    ]
   }
-  return dropLine
+  folderDragId = null
+  clearDropLine()
 }
 function computeInsertIndex(container, clientX, clientY) {
   const all = [...container.querySelectorAll('.tile:not(.add)')]
@@ -76,21 +99,7 @@ function computeInsertIndex(container, clientX, clientY) {
   }
   return { tiles: all, index }
 }
-function clearDropLine() {
-  if (dropLine && dropLine.parentNode) dropLine.remove()
-  dropLine = null
-}
-function showDropLine(e) {
-  const line = ensureDropLine()
-  if (line.parentNode) line.remove()
-  const grid = gridRef.value
-  if (!grid) return
-  const { tiles, index } = computeInsertIndex(grid, e.clientX, e.clientY)
-  line.dataset.idx = index
-  const addTile = grid.querySelector('.tile.add')
-  if (index >= tiles.length) grid.insertBefore(line, addTile)
-  else grid.insertBefore(line, tiles[index])
-}
+function clearDropLine() { folderLastTarget = -1 }
 
 function onGridDrop(e) {
   e.preventDefault()
@@ -98,27 +107,49 @@ function onGridDrop(e) {
   if (!lid || !ui.folderOpenId) { clearDropLine(); return }
   const l = state.links.find(x => x.id === lid)
   if (!l) { clearDropLine(); return }
-  const oldFid = l.folderId
-  l.folderId = ui.folderOpenId
-  if (oldFid && oldFid !== ui.folderOpenId) pruneEmptyFolders()
-  let arr = state.links.filter(x => x.folderId === ui.folderOpenId)
-  const oi = arr.findIndex(x => x.id === lid)
-  if (oi > -1) arr.splice(oi, 1)
-  const idx = dropLine ? parseInt(dropLine.dataset.idx, 10) : arr.length
-  arr.splice(Math.max(0, Math.min(idx, arr.length)), 0, l)
-  const ids = arr.map(x => x.id)
-  state.links = [
-    ...state.links.filter(x => x.folderId !== ui.folderOpenId),
-    ...ids.map(id => state.links.find(x => x.id === id)).filter(Boolean)
-  ]
+  folderDropped = true
+  if (l.folderId !== ui.folderOpenId) {
+    // 跨文件夹拖入：移入并追加到末尾（同文件夹已在拖动中实时排序）
+    l.folderId = ui.folderOpenId
+    pruneEmptyFolders()
+    let arr = state.links.filter(x => x.folderId === ui.folderOpenId && x.id !== lid)
+    arr.push(l)
+    state.links = [
+      ...state.links.filter(x => x.folderId !== ui.folderOpenId),
+      ...arr.map(x => x.id).map(id => state.links.find(x => x.id === id)).filter(Boolean)
+    ]
+  }
   save()
   clearDropLine()
 }
 function onGridDragover(e) {
   if (e.dataTransfer.types.includes('text/link')) {
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'
-    showDropLine(e)
+    const grid = gridRef.value?.$el
+    if (grid) moveFolderLink(e.clientX, e.clientY)
   }
+}
+/* 实时换位：拖动中把文件夹内被拖链接移到目标位 */
+function moveFolderLink(clientX, clientY) {
+  const now = Date.now()
+  if (now - folderLastMove < 50) return
+  folderLastMove = now
+  const grid = gridRef.value?.$el
+  if (!grid || !ui.folderOpenId || !folderDragId) return
+  const target = computeInsertIndex(grid, clientX, clientY).index
+  if (target === folderLastTarget) return
+  folderLastTarget = target
+  const l = state.links.find(x => x.id === folderDragId)
+  if (!l) return
+  let arr = state.links.filter(x => x.folderId === ui.folderOpenId)
+  const oi = arr.findIndex(x => x.id === folderDragId)
+  if (oi > -1) arr.splice(oi, 1)
+  arr.splice(Math.max(0, Math.min(target, arr.length)), 0, l)
+  const ids = arr.map(x => x.id)
+  state.links = [
+    ...state.links.filter(x => x.folderId !== ui.folderOpenId),
+    ...ids.map(id => state.links.find(x => x.id === id)).filter(Boolean)
+  ]
 }
 onBeforeUnmount(clearDropLine)
 
@@ -161,12 +192,12 @@ function letterStyle(l) {
         </button>
       </div>
 
-      <div class="fp-grid" ref="gridRef" @dragover="onGridDragover" @drop="onGridDrop">
+      <TransitionGroup tag="div" name="tile" class="fp-grid" ref="gridRef" @dragover="onGridDragover" @drop="onGridDrop">
         <div v-for="l in links" :key="l.id"
              class="tile" :data-id="l.id" draggable="true"
              @click="openLink(l)"
-             @dragstart="e => { e.dataTransfer.setData('text/link', l.id); e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('dragging') }"
-             @dragend="e => e.currentTarget.classList.remove('dragging')">
+             @dragstart="startFolderLinkDrag($event, l)"
+             @dragend="endFolderLinkDrag($event)">
           <div class="t-ico" :data-ic="l.iconMode">
             <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
                  @error="onImgError" @load="onImgLoad">
@@ -175,12 +206,12 @@ function letterStyle(l) {
           <div class="t-name">{{ l.title }}</div>
         </div>
 
-        <div class="tile add" @click.stop="openAddForm($event.currentTarget, folder.id)">
+        <div class="tile add" key="add" @click.stop="openAddForm($event.currentTarget, folder.id)">
           <div class="plus">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           </div>
         </div>
-      </div>
+      </TransitionGroup>
     </div>
   </div>
 </template>
