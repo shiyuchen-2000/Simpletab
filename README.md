@@ -37,7 +37,12 @@
 
 ## 一、安装方法（Edge / Chrome 通用）
 
-> MV3 扩展不能直接双击 `.zip` 安装，需先**解压成文件夹**，再「加载已解压的扩展程序」。本包 `simpletab-v1.6.0.zip` 内 `manifest.json` 位于压缩包根目录。
+> 仓库**不含构建产物**（`dist/` 已被 `.gitignore` 忽略），以下涉及 `dist/` 的方式均需**先构建**：
+> ```bash
+> npm install
+> npm run build    # 产物在 dist/
+> ```
+> 本包 `simpletab-v1.6.0.zip`（已构建，含 `manifest.json` 于根目录）可直接解压安装，无需构建。
 
 ### 方式一：从压缩包安装（推荐）
 
@@ -56,7 +61,24 @@ npm run build    # 产物在 dist/
 
 然后在扩展管理页「加载已解压的扩展程序」选择 `dist/` 目录。
 
+### 方式三：Firefox 直装（非商店）
+
+> 本扩展同时兼容 Firefox（Manifest V3，Firefox 109+）。仓库无 `dist/`，**安装前请先构建**（见本页顶部构建命令）。
+
+**① 临时加载（调试 / 体验，重启 Firefox 后失效）**
+1. 先构建：`npm install && npm run build`（生成 `dist/manifest.json`）
+2. 地址栏输入 `about:debugging` 回车
+3. 左侧点击「本机扩展」→「临时载入附加组件」
+4. 选择 `dist/manifest.json`（或压缩包解压后的 `manifest.json` 文件）
+5. 新建标签页即可看到 SimpleTab
+
+**② 永久安装（自用 / 离线）**
+- Firefox 对未签名扩展默认拦截，需在 `about:config` 中把 `xpinstall.signatures.required` 设为 `false`
+- 仅建议离线自用；日常使用仍推荐走官方商店（AMO）
+
 ---
+
+
 
 ## 二、常用操作
 
