@@ -1,10 +1,25 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
-import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme, autoFitClockColors, saveCurrentAsPreset } from '../store'
+import { state, ui, save, toast, fontStack, resetSettings, DEFAULT_SETTINGS, resolvedTheme, autoFitClockColors, saveCurrentAsPreset, setView, showConfirm } from '../store'
 import { useGearModal } from '../store/useGearModal'
 
 /* 每个设置行的标签与描述，用于搜索过滤。分组按「改哪块」分区，实时预览固定顶部不在此列 */
 const GROUPS = computed(() => [
+  {
+    label: '外观预设',
+    rows: [
+      { id: 'presets', title: '外观预设', desc: '一键应用整套外观，之后可展开逐项微调', keywords: ['外观预设', '预设', '一键应用', '整套外观', 'preset', '外观'] }
+    ]
+  },
+  {
+    label: '页面布局',
+    rows: [
+      { id: 'pos', title: '时钟位置', desc: '预设摆放位置', keywords: ['时钟位置', '位置', 'top', 'mid', 'bottom', 'left', 'right'] },
+      { id: 'searchPos', title: '搜索框位置', desc: '预设摆放位置', keywords: ['搜索框位置', '位置', '顶部', '中部', '底部', '左上', '右上', 'search', 'pos'] },
+      { id: 'dockPos', title: '拓展坞位置', desc: '预设摆放位置', keywords: ['拓展坞位置', '位置', '顶部', '中部', '底部', '左上', '右上', 'dock', 'pos'] },
+      { id: 'layout', title: '自定义页面布局', desc: '拖拽调整时钟 / 搜索框 / 拓展坞的位置与大小', keywords: ['自定义', '页面布局', '布局', '拖拽', '位置', '大小', '调整', 'layout'] }
+    ]
+  },
   {
     label: '主题',
     rows: [
@@ -26,7 +41,6 @@ const GROUPS = computed(() => [
     label: '时钟',
     rows: [
       { id: 'hour', title: '时间格式', desc: '12 小时 / 24 小时', keywords: ['时间格式', '12小时', '24小时', 'hour', 'format'] },
-      { id: 'pos', title: '时钟位置', desc: '预设摆放位置', keywords: ['时钟位置', '位置', 'top', 'mid', 'bottom', 'left', 'right'] },
       { id: 'sec', title: '显示秒', desc: '在时间后显示秒数', keywords: ['显示秒', '秒', 'second'] },
       { id: 'blink', title: '分隔符闪烁', desc: '时间冒号每秒闪烁', keywords: ['分隔符', '闪烁', '冒号', 'blink'] },
       { id: 'clockColor', title: '时间颜色', desc: '自定义时钟文字颜色', keywords: ['时间颜色', '颜色', 'color'] },
@@ -56,7 +70,8 @@ const GROUPS = computed(() => [
     rows: [
       { id: 'searchOpacity', title: '搜索框透明度', desc: '调节搜索框背景的透明程度', keywords: ['搜索框透明度', '搜索框', '透明度', 'search', 'opacity'] },
       { id: 'searchRadius', title: '搜索框圆角', desc: '胶囊(29px)到方形(10px)之间调节，实时预览', keywords: ['搜索框圆角', '搜索框', '圆角', 'radius', '胶囊', '方形'] },
-      { id: 'searchAnim', title: '搜索框动画', desc: '聚焦时的 3D 动效：无 / 沉入 / 浮升', keywords: ['搜索框动画', '动画', '3D', '沉入', '浮升', '动效', '效果', 'search', 'anim'] }
+      { id: 'searchAnim', title: '搜索框动画', desc: '聚焦时的 3D 动效：无 / 沉入 / 浮升', keywords: ['搜索框动画', '动画', '3D', '沉入', '浮升', '动效', '效果', 'search', 'anim'] },
+      { id: 'searchSwap', title: '交换位置', desc: '交换搜索引擎与搜索图标的位置', keywords: ['交换位置', '搜索引擎', '图标', '位置', 'swap', 'search'] },
     ]
   },
   {
@@ -64,7 +79,7 @@ const GROUPS = computed(() => [
     rows: [
       { id: 'dock', title: '显示拓展坞', desc: '在页面下侧显示快捷图标栏', keywords: ['显示拓展坞', '拓展坞', 'dock'] },
       { id: 'dockCount', title: '图标数量', desc: '拓展坞最多显示的图标数', keywords: ['图标数量', '拓展坞', '数量'] },
-      { id: 'dockOpacity', title: '拓展坞透明度', desc: '调节拓展坞背景的透明程度', keywords: ['拓展坞透明度', '拓展坞', '透明度', 'dock', 'opacity'] }
+      { id: 'dockOpacity', title: '拓展坞透明度', desc: '调节拓展坞背景的透明程度', keywords: ['拓展坞透明度', '拓展坞', '透明度', 'dock', 'opacity'] },
     ]
   }
 ])
@@ -74,7 +89,7 @@ const keywordMatch = (row, q) => {
   return q.split(/\s+/).every(k => text.includes(k))
 }
 /* 常用项 = 外观 / 颜色 / 布局 / 磁贴名称；其余样式 / 行为设置归入「个性化」，点按钮展开 */
-const BASIC_ROWS = new Set(['theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'autoColor', 'pos', 'hour', 'density', 'iconSize', 'tileText'])
+const BASIC_ROWS = new Set(['presets', 'theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'autoColor', 'pos', 'searchPos', 'dockPos', 'layout', 'hour', 'density', 'iconSize', 'tileText'])
 /* 外观预设：一键应用整套外观（不涉及链接/文件夹），应用后仍可展开逐项细调 */
 const PRESETS = [
   {
@@ -215,7 +230,7 @@ const dockCountOptions = [['3', '3'], ['5', '5'], ['7', '7']]
 const shapeOptions = [['rounded', '圆角'], ['square', '方形'], ['squircle', '半圆角'], ['circle', '圆形']]
 const tileTextOptions = [['always', '始终显示'], ['hover', '悬浮显示'], ['none', '不显示']]
 /* 开关行字段映射（state 里的布尔字段名） */
-const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor' }
+const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor', searchSwap: 'searchSwap' }
 /* Fluent 风格下固定的材质类设置项：在 CSS [data-style="fluent"] 块中被 Fluent 规范值覆盖，故置灰不可调 */
 const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
 const rowFixed = r => (state.style === 'fluent' || state.style === 'borderless') && FIXED_ROWS.includes(r.id)
@@ -266,7 +281,34 @@ function setOpenIn(v) { state.linkOpenIn = v; save() }
 function setHour(v) { state.hour12 = v === '12'; save() }
 /* 自动适配开关：开启立即重算并锁定手动调色；关闭恢复主题默认色 */
 const colorAutoFixed = r => state.autoColor && (r.id === 'clockColor' || r.id === 'dateColor')
-function setClockPos(v) { state.clockPos = v; save() }
+/* 切换位置预设：清除对应元素的自定义坐标（保留大小/宽度），使预设立即生效 */
+function clearCustomPos(kind) {
+  const c = state.layoutCustom
+  if (!c || !c[kind]) return
+  delete c[kind].x
+  delete c[kind].y
+  if (!Object.keys(c[kind]).length) delete c[kind]
+  if (!Object.keys(c).length) state.layoutCustom = null
+}
+function setClockPos(v) { state.clockPos = v; clearCustomPos('clock'); save() }
+function setSearchPos(v) { state.searchPos = v; clearCustomPos('search'); save() }
+function setDockPos(v) { state.dockPos = v; clearCustomPos('dock'); save() }
+/* 进入页面布局全屏编辑器 */
+function openLayoutEditor() {
+  closeModal()
+  ui.layoutEdit = true
+  setView('home')   // 布局元素主要在主页显示，编辑器打开时切到主页便于拖拽预览
+}
+/* 重置页面布局：二次确认后恢复默认居中预设 */
+function askResetLayout() {
+  showConfirm('layoutReset', null, null, null, '重置页面布局？', '将清除自定义调整，恢复默认位置（时钟顶 / 搜索框中 / 拓展坞底）')
+}
+/* 实时预览：关闭设置弹窗进入真实页面（仅可切换视图/打开文件夹，不可访问链接/打开设置） */
+function openPreview() {
+  closeModal()
+  ui.preview = true
+  setView('home')
+}
 function setTheme(v) { state.theme = v; save() }
 function setStyle(v) { state.style = v; save() }
 function setDateFormat(v) { state.dateFormat = v; save() }
@@ -351,22 +393,12 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
         <button v-if="ui.searchFilter" class="set-search-clear" @click.stop="ui.searchFilter = ''"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
 
-      <!-- 实时预览：固定顶部，调节时始终可见，不参与搜索过滤 -->
-      <div class="set-group sm-pinned">
-        <div class="set-label">实时预览</div>
-        <div class="pv" :class="'pv-' + resolvedTheme" style="margin:0 auto;">
-          <div class="pv-clock">12:34</div>
-          <div class="pv-search">
-            <span class="pv-s-ico"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-            <span class="pv-engine">{{ engineName }}</span>
-          </div>
-          <div class="pv-tiles">
-            <div class="pv-tile"><span class="pv-t-ico">G</span><span class="pv-t-name">GitHub</span></div>
-            <div class="pv-tile"><span class="pv-t-ico">B</span><span class="pv-t-name">哔哩</span></div>
-            <div class="pv-tile"><span class="pv-t-ico">M</span><span class="pv-t-name">MDN</span></div>
-          </div>
-        </div>
-      </div>
+      <!-- 实时预览：进入真实页面查看效果 -->
+      <button class="preview-entry" @click="openPreview">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        实时预览
+        <em>进入页面查看真实效果</em>
+      </button>
 
       <!-- 设置列表：独立滚动 -->
       <div class="sm-scroll" ref="smScrollRef" @scroll="onScrollNav">
@@ -377,35 +409,31 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
           收起个性化
         </button>
       </Transition>
-      <!-- 外观预设：折叠状态置顶，一键应用整套外观 -->
-      <Transition name="pg">
-        <div v-if="!showPersonalized && !ui.searchFilter" class="preset-box">
-          <div class="set-label">外观预设</div>
-          <p class="preset-hint">一键应用整套外观，之后可展开逐项微调</p>
-          <div class="preset-list">
-            <button v-for="p in PRESETS" :key="p.id" class="preset-card" @click="applyPreset(p)">
-              <span class="preset-name">{{ p.name }}</span>
-              <span class="preset-desc">{{ p.desc }}</span>
-            </button>
-            <div v-for="(p, i) in state.customPresets" :key="p.id" class="preset-card cp" @click="applyPreset({ name: p.name || '自定义' + (i + 1), settings: p.settings })">
-              <span class="preset-name">{{ p.name || '自定义' + (i + 1) }}</span>
-              <span class="preset-desc">{{ p.desc || presetTime(p.time) }}</span>
-              <button class="pd-del" title="删除预设" @click.stop="askDeletePreset(p)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </div>
-          </div>
-          <button class="preset-add" @click="openPresetPanel">+ 添加现有设置到预设</button>
-        </div>
-      </Transition>
       <!-- 分组渲染，按搜索过滤（展开 / 收起带过渡） -->
       <TransitionGroup name="pg" tag="div">
         <div v-for="g in visibleRows" :key="g.label" class="set-group" :data-group="g.label" :class="{ 'set-group-first': g === visibleRows[0] }">
           <div class="set-label">{{ g.label }}</div>
 
           <template v-for="r in g.rows" :key="r.id">
+            <!-- 外观预设：一键应用整套外观 -->
+            <div v-if="r.id === 'presets'" class="preset-box" style="margin-top:.4rem;">
+              <div class="preset-list">
+                <button v-for="p in PRESETS" :key="p.id" class="preset-card" @click="applyPreset(p)">
+                  <span class="preset-name">{{ p.name }}</span>
+                  <span class="preset-desc">{{ p.desc }}</span>
+                </button>
+                <div v-for="(p, i) in state.customPresets" :key="p.id" class="preset-card cp" @click="applyPreset({ name: p.name || '自定义' + (i + 1), settings: p.settings })">
+                  <span class="preset-name">{{ p.name || '自定义' + (i + 1) }}</span>
+                  <span class="preset-desc">{{ p.desc || presetTime(p.time) }}</span>
+                  <button class="pd-del" title="删除预设" @click.stop="askDeletePreset(p)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button class="preset-add" @click="openPresetPanel">+ 添加现有设置到预设</button>
+            </div>
             <!-- 时钟：时间格式 -->
-            <div v-if="r.id === 'hour'" class="set-row">
+            <div v-else-if="r.id === 'hour'" class="set-row">
               <div><div class="r-t">时间格式</div><div class="r-d">12 小时 / 24 小时</div></div>
               <div class="seg">
                 <button v-for="[v, label] in hourOptions" :key="v" :class="{ on: (state.hour12 ? '12' : '24') === v }" @click="setHour(v)">{{ label }}</button>
@@ -416,6 +444,26 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
               <div><div class="r-t">时钟位置</div><div class="r-d">预设摆放位置</div></div>
               <div class="seg">
                 <button v-for="[v, label] in posOptions" :key="v" :class="{ on: state.clockPos === v }" @click="setClockPos(v)">{{ label }}</button>
+              </div>
+            </div>
+            <div v-else-if="r.id === 'searchPos'" class="set-row">
+              <div><div class="r-t">搜索框位置</div><div class="r-d">预设摆放位置</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in posOptions" :key="v" :class="{ on: state.searchPos === v }" @click="setSearchPos(v)">{{ label }}</button>
+              </div>
+            </div>
+            <div v-else-if="r.id === 'dockPos'" class="set-row">
+              <div><div class="r-t">拓展坞位置</div><div class="r-d">预设摆放位置</div></div>
+              <div class="seg">
+                <button v-for="[v, label] in posOptions" :key="v" :class="{ on: state.dockPos === v }" @click="setDockPos(v)">{{ label }}</button>
+              </div>
+            </div>
+            <!-- 自定义页面布局：进入全屏拖拽调整 -->
+            <div v-else-if="r.id === 'layout'" class="set-row">
+              <div><div class="r-t">自定义页面布局 <span class="layout-warn">元素可能存在遮挡，请自行调整</span></div><div class="r-d">拖拽时钟 / 搜索框 / 拓展坞，调整位置与大小</div></div>
+              <div class="layout-actions">
+                <button class="btn btn-ghost" @click="askResetLayout">重置布局</button>
+                <button class="btn btn-primary" @click="openLayoutEditor">调整布局</button>
               </div>
             </div>
             <!-- 开关行 -->
@@ -724,6 +772,16 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 .preset-card .pd-del:hover{background:rgba(231,76,86,.22);}
 .preset-add{margin-top:.8rem;width:100%;padding:.6rem;border-radius:11px;font-size:.86rem;color:var(--accent-text);background:var(--glass-soft);border:1px dashed var(--glass-border);cursor:pointer;transition:background .2s,border-color .2s;}
 .preset-add:hover{background:rgba(var(--accent-rgb),.12);border-color:rgba(var(--accent-rgb),.5);}
+/* 页面布局调整提示：红色弱提示，提醒元素可能存在遮挡 */
+.layout-warn{font-size:.68rem;font-weight:400;color:#ff8a94;margin-left:.4rem;vertical-align:1px;}
+.layout-actions{display:flex;align-items:center;gap:.5rem;flex:none;}
+/* 实时预览入口 */
+.preview-entry{display:flex;align-items:center;gap:10px;width:100%;padding:.7rem .8rem;margin-bottom:.9rem;border-radius:12px;
+  font-size:.88rem;font-weight:600;color:var(--accent-text);cursor:pointer;text-align:left;
+  background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.3);transition:background .2s,border-color .2s;}
+.preview-entry:hover{background:rgba(var(--accent-rgb),.18);border-color:rgba(var(--accent-rgb),.55);}
+.preview-entry svg{flex:none;}
+.preview-entry em{font-style:normal;font-weight:400;font-size:.72rem;color:var(--text-faint);margin-left:auto;letter-spacing:.02em;}
 
 /* 右侧面板：透明无边框，内容分条动画加载 */
 .preset-panel{position:absolute;left:calc(100% + 20px);top:0;bottom:0;width:250px;z-index:5;display:flex;flex-direction:column;pointer-events:auto;transition:transform .3s var(--ease);}

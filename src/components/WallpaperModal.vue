@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { state, ui, save, toast, resolvedTheme, isVideoWallpaper } from '../store'
+import { state, ui, save, toast, resolvedTheme, isVideoWallpaper, importWallpaperFolder, clearWallpaperFolder, rotateWallpaperNow, setWallpaperRotateMode, setWallpaperRotateInterval } from '../store'
 import { saveWallpaperBlob, clearWallpaperBlob } from '../store/wallpaperDB'
 import { useGearModal } from '../store/useGearModal'
 
 const fileInput = ref(null)
+const folderInput = ref(null)
 
 const previewStyle = computed(() => {
   /* 图片壁纸：预览背景；视频壁纸/默认壁纸：极光渐变占位（视频由下方 video 元素实时渲染） */
@@ -32,6 +33,7 @@ function swap(url, type) {
   }
   state.wallpaper = url
   state.wallpaperType = type
+  state.wallpaperFolderIndex = -1   // 手动选壁纸即脱离文件夹轮换标记
 }
 
 /* 视频壁纸体积上限 */
@@ -114,6 +116,16 @@ async function remove() {
   toast('已恢复默认壁纸')
 }
 
+/* ---------- 文件夹轮换壁纸 ---------- */
+function pickFolder() { folderInput.value?.click() }
+async function onFolder(e) {
+  const files = Array.from(e.target.files || []).filter(f => /^image\//.test(f.type))
+  e.target.value = ''
+  if (!files.length) { toast('文件夹内没有图片', 'err'); return }
+  await importWallpaperFolder(files)
+}
+function clearFolder() { clearWallpaperFolder(); toast('已清空文件夹壁纸') }
+
 /* ---------- 从设置按钮弹出 / 落回 ---------- */
 const { modalRef, modalOrigin, closing, closeModal } = useGearModal('wallpaper')
 </script>
@@ -137,7 +149,48 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('wallpaper')
         </button>
         <button class="btn btn-ghost" @click="remove">移除壁纸 / 恢复默认</button>
       </div>
+
+      <!-- 文件夹轮换壁纸 -->
+      <div class="wp-rotate">
+        <div class="set-row">
+          <div><div class="r-t">壁纸轮换</div><div class="r-d">从已导入的文件夹图片中自动更换</div></div>
+          <div class="seg">
+            <button :class="{ on: !state.wallpaperFolderMode }" @click="setWallpaperRotateMode('off')">关闭</button>
+            <button :class="{ on: state.wallpaperFolderMode === 'open' }" @click="setWallpaperRotateMode('open')">每次打开</button>
+            <button :class="{ on: state.wallpaperFolderMode === 'timer' }" @click="setWallpaperRotateMode('timer')">定时</button>
+          </div>
+        </div>
+        <div v-if="state.wallpaperFolderMode === 'timer'" class="set-row">
+          <div><div class="r-t">定时间隔</div><div class="r-d">每隔多久自动换一张</div></div>
+          <div class="seg">
+            <button v-for="m in [5, 15, 30, 60]" :key="m" :class="{ on: state.wallpaperFolderInterval === m }" @click="setWallpaperRotateInterval(m)">{{ m }} 分钟</button>
+          </div>
+        </div>
+        <div class="wp-folder">
+          <button class="btn btn-ghost" @click="pickFolder">选择图片文件夹…</button>
+          <span class="wp-fcount">已导入 {{ state.wallpaperFolderCount }} 张</span>
+          <button v-if="state.wallpaperFolderCount" class="btn-mini" @click="rotateWallpaperNow">换一张</button>
+          <button v-if="state.wallpaperFolderCount" class="btn-mini danger" @click="clearFolder">清空</button>
+        </div>
+        <input type="file" ref="folderInput" webkitdirectory multiple hidden @change="onFolder">
+      </div>
+
       <input type="file" ref="fileInput" accept="image/*,video/*" hidden @change="onFile">
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 文件夹轮换壁纸设置区 */
+.wp-rotate{margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--glass-border);display:flex;flex-direction:column;gap:.7rem;}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;}
+.r-t{font-size:.88rem;font-weight:600;}
+.r-d{font-size:.72rem;color:var(--text-faint);}
+.seg{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end;}
+.seg button{padding:.3rem .6rem;border-radius:8px;font-size:.78rem;border:1px solid var(--glass-border);background:var(--glass-soft);color:var(--text);cursor:pointer;transition:background .2s,color .2s,border-color .2s;}
+.seg button.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);}
+.wp-folder{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.wp-fcount{font-size:.78rem;color:var(--text-faint);}
+.btn-mini.danger{color:#ff8a94;}
+.btn-mini.danger:hover{background:rgba(231,76,86,.15);}
+</style>

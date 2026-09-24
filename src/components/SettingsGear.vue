@@ -1,27 +1,5 @@
 <script setup>
-import { watch } from 'vue'
-import { ui, startTour } from '../store'
-
-/* 下拉打开时：计算磁贴第一排最后一个磁贴的右边缘，让时钟右边缘对齐它（避让下拉，不消失） */
-watch(() => ui.dropdownOpen, (open) => {
-  const root = document.documentElement
-  if (!open) { root.style.removeProperty('--clock-right'); return }
-  const area = document.querySelector('.link-area')
-  if (!area) return
-  const tiles = Array.from(area.querySelectorAll('.tile'))
-  if (!tiles.length) return
-  /* 按 top 分行，取第一排（top 最小）的最后一个磁贴 */
-  let firstRow = [], firstTop = Infinity
-  tiles.forEach(t => {
-    const top = t.getBoundingClientRect().top
-    if (top < firstTop - 2) { firstTop = top; firstRow = [t] }
-    else if (Math.abs(top - firstTop) < 2) firstRow.push(t)
-  })
-  const last = firstRow[firstRow.length - 1]
-  if (!last) return
-  const right = Math.max(0, window.innerWidth - last.getBoundingClientRect().right)
-  root.style.setProperty('--clock-right', right + 'px')
-})
+import { ui, startTour, setView } from '../store'
 
 function onGearClick() {
   ui.dropdownOpen = !ui.dropdownOpen
@@ -30,6 +8,10 @@ function openPanel(name) {
   ui.dropdownOpen = false
   /* 打开任意设置面板时关闭新建/编辑链接弹窗，避免两个浮层叠加 */
   ui.linkForm.visible = false
+  /* 设置弹窗弹出前先切到搜索页（主页）：位置/布局类设置项在主页可见性最好。
+     必须在设 ui.modal 之前调用——setView 内部的 closeAllPopups 会清空 ui.modal，
+     若顺序反了会刚打开弹窗又被关闭 */
+  if (name === 'settings') setView('home')
   ui.modal = name
 }
 /* 安装扩展：打开宣传页/下载页（新标签页） */

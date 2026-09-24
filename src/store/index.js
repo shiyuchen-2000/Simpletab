@@ -3,7 +3,7 @@
 // ============================================================
 import { reactive, ref, computed, watch, watchEffect, nextTick } from 'vue'
 import { ensureFavicon, hostOf } from './faviconCache'
-import { loadWallpaperBlob, saveWallpaperBlob, clearWallpaperBlob, kindOfBlob } from './wallpaperDB'
+import { loadWallpaperBlob, saveWallpaperBlob, clearWallpaperBlob, kindOfBlob, saveFolderImage, loadFolderImage, clearFolderImages } from './wallpaperDB'
 
 /* ---------- 工具 ---------- */
 export const uid = () => Math.random().toString(36).slice(2, 9)
@@ -78,13 +78,14 @@ const DEFAULT_FOLDERS = [{ id: 'f1', title: '开发工具' }]
 
 const DEFAULTS = {
   view: 'home', theme: 'dark', style: 'glass', hour12: false, showSeconds: false, blink: false,
-  clockFont: 'system-ui', clockColor: null, clockPos: 'top', autoColor: false,
+  clockFont: 'system-ui', clockColor: null, clockPos: 'top', autoColor: false, searchPos: 'mid', dockPos: 'bottom', layoutCustom: null,
+  wallpaperFolderMode: null, wallpaperFolderInterval: 30, wallpaperFolderIndex: -1, wallpaperFolderCount: 0,
   showDate: true, dateFormat: 'cn-long', dateColor: null,
   engine: 'baidu', engines: DEFAULT_ENGINES, wallpaper: null, wallpaperType: null, dockEnabled: true, dockCount: 7,
   accentColor: null,
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true, tileEnter: 'drop', folderAnim: 'flip',
-  wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', dockOpacity: 0.72,
+  wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', searchSwap: false, dockOpacity: 0.72,
   links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS, customPresets: []
 }
 
@@ -92,12 +93,15 @@ const DEFAULTS = {
 export const DEFAULT_SETTINGS = {
   theme: DEFAULTS.theme, style: DEFAULTS.style, hour12: DEFAULTS.hour12, showSeconds: DEFAULTS.showSeconds, blink: DEFAULTS.blink,
   clockFont: DEFAULTS.clockFont, clockColor: DEFAULTS.clockColor, clockPos: DEFAULTS.clockPos,
+  searchPos: DEFAULTS.searchPos, dockPos: DEFAULTS.dockPos, layoutCustom: DEFAULTS.layoutCustom,
+  wallpaperFolderMode: DEFAULTS.wallpaperFolderMode, wallpaperFolderInterval: DEFAULTS.wallpaperFolderInterval,
+  wallpaperFolderIndex: DEFAULTS.wallpaperFolderIndex, wallpaperFolderCount: DEFAULTS.wallpaperFolderCount,
   showDate: DEFAULTS.showDate, dateFormat: DEFAULTS.dateFormat, dateColor: DEFAULTS.dateColor, autoColor: DEFAULTS.autoColor,
   engine: DEFAULTS.engine, wallpaper: DEFAULTS.wallpaper, wallpaperType: DEFAULTS.wallpaperType, dockEnabled: DEFAULTS.dockEnabled, dockCount: DEFAULTS.dockCount,
   accentColor: DEFAULTS.accentColor,
   glassStrength: DEFAULTS.glassStrength, cardRadius: DEFAULTS.cardRadius, tileDensity: DEFAULTS.tileDensity, linkOpenIn: DEFAULTS.linkOpenIn, searchRadius: DEFAULTS.searchRadius,
   iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine, tileEnter: DEFAULTS.tileEnter, folderAnim: DEFAULTS.folderAnim,
-  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, dockOpacity: DEFAULTS.dockOpacity
+  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, searchSwap: DEFAULTS.searchSwap, dockOpacity: DEFAULTS.dockOpacity
 }
 
 /* ---------- 持久化封装：chrome.storage.local 优先，sync 云端备份，回退 localStorage ---------- */
@@ -247,7 +251,11 @@ export function applySaved(saved) {
     blink: saved.blink ?? state.blink,
     clockFont: saved.clockFont ?? state.clockFont,
     clockColor: saved.clockColor ?? state.clockColor,
-    clockPos: saved.clockPos ?? state.clockPos,
+    clockPos: saved.clockPos ?? state.clockPos, searchPos: saved.searchPos ?? state.searchPos, dockPos: saved.dockPos ?? state.dockPos, layoutCustom: saved.layoutCustom ?? state.layoutCustom,
+    wallpaperFolderMode: saved.wallpaperFolderMode ?? state.wallpaperFolderMode,
+    wallpaperFolderInterval: saved.wallpaperFolderInterval ?? state.wallpaperFolderInterval,
+    wallpaperFolderIndex: saved.wallpaperFolderIndex ?? state.wallpaperFolderIndex,
+    wallpaperFolderCount: saved.wallpaperFolderCount ?? state.wallpaperFolderCount,
     showDate: saved.showDate ?? state.showDate,
     dateFormat: saved.dateFormat ?? state.dateFormat,
     dateColor: saved.dateColor ?? state.dateColor,
@@ -274,7 +282,7 @@ export function applySaved(saved) {
     folderAnim: saved.folderAnim ?? state.folderAnim,
     wallpaperVignette: saved.wallpaperVignette ?? state.wallpaperVignette,
     searchOpacity: saved.searchOpacity ?? state.searchOpacity,
-    searchAnim: saved.searchAnim ?? state.searchAnim,
+    searchAnim: saved.searchAnim ?? state.searchAnim, searchSwap: saved.searchSwap ?? state.searchSwap,
     dockOpacity: saved.dockOpacity ?? state.dockOpacity,
     links: saved.links ?? state.links,
     folders: saved.folders ?? state.folders,
@@ -302,7 +310,7 @@ const ui = reactive({
   now: new Date(),
   homeLeaving: false,
   linksLeaving: false,
-  dropdownOpen: false,
+  dropdownOpen: false, layoutEdit: false, preview: false,
   modal: null,                 // 'settings' | 'wallpaper' | 'about' | null
   searchQuery: '',
   searchFilter: '',
@@ -520,6 +528,75 @@ watchEffect(() => {
 watchEffect(() => {
   document.documentElement.dataset.searchAnim = state.searchAnim || 'none'
 })
+/* 搜索栏：交换搜索引擎与图标位置，驱动 CSS 反向排列 */
+watchEffect(() => {
+  document.documentElement.dataset.searchSwap = state.searchSwap ? '1' : '0'
+})
+/* ---------- 页面布局：时钟/搜索框/拓展坞各自独立坐标（自定义优先，否则按位置预设） ---------- */
+const LAYOUT_POS = {
+  top:    { x: 50, y: 9 },
+  mid:    { x: 50, y: 40 },
+  bottom: { x: 50, y: 92 },
+  left:   { x: 20, y: 20 },
+  right:  { x: 80, y: 20 }
+}
+/* 解析各元素实际坐标（自定义优先，否则按位置预设），供布局编辑与 CSS 变量使用。
+   同预设的多个元素自动垂直错开（时钟在上、拓展坞在下），保证任意主题下不重叠：
+   - 顶部预设：从上往下依次排布；中部预设：以预设点对称排布；底部预设：从下往上依次排布
+   - 错开 15vh（约 162px）大于时钟高度（约 150px），避免无界等主题下时钟更宽/更高时重叠 */
+export function resolveLayout() {
+  const ORDER = ['clock', 'search', 'dock']
+  const STEP = 15   // 错开间距（vh）
+  /* 统计各预设被选次数（仅未自定义的元素参与排布） */
+  const count = {}
+  ORDER.forEach(k => {
+    const c = state.layoutCustom && state.layoutCustom[k]
+    if (c && c.x != null) return
+    const pos = state[k + 'Pos'] || 'mid'
+    count[pos] = (count[pos] || 0) + 1
+  })
+  const idx = {}
+  const resolve = (kind, defSize, defWidth) => {
+    const c = state.layoutCustom && state.layoutCustom[kind]
+    const pos = state[kind + 'Pos'] || 'mid'
+    const p = LAYOUT_POS[pos] || LAYOUT_POS.mid
+    if (c && c.x != null) return { x: c.x, y: c.y, size: c.size != null ? c.size : defSize, width: c.width != null ? c.width : defWidth }
+    const i = idx[pos] || 0
+    idx[pos] = i + 1
+    const n = count[pos] || 1
+    let y
+    if (pos === 'bottom') y = p.y - (n - 1 - i) * STEP      // 底部：dock 贴底，依次向上
+    else if (pos === 'top' || pos === 'left' || pos === 'right') y = p.y + i * STEP
+    /* 顶部/左上/右上：上方空间小（y=9~20），clock 留在预设位、依次向下排，
+       避免对称错开把时钟顶出屏幕 */
+    else y = p.y + (i - (n - 1) / 2) * STEP                  // 中部：以预设点对称排布
+    return { x: p.x, y: Math.min(92, Math.max(5, y)), size: defSize, width: defWidth }
+  }
+  return { clock: resolve('clock', 100, 400), search: resolve('search', 100, 400), dock: resolve('dock', 100, 400) }
+}
+/* 将布局坐标写入 CSS 变量（布局编辑器可调用刷新） */
+export function applyLayoutVars() {
+  const root = document.documentElement
+  const { clock, search, dock } = resolveLayout()
+  root.style.setProperty('--clock-x', clock.x + '%')
+  root.style.setProperty('--clock-y', clock.y + '%')
+  root.style.setProperty('--clock-scale', String(clock.size / 100))
+  root.style.setProperty('--search-x', search.x + '%')
+  root.style.setProperty('--search-y', search.y + '%')
+  root.style.setProperty('--search-w', search.width + 'px')
+  root.style.setProperty('--dock-x', dock.x + '%')
+  root.style.setProperty('--dock-y', dock.y + '%')
+}
+watchEffect(applyLayoutVars)
+/* 重置页面布局：清除自定义坐标并恢复默认居中预设（时钟顶 / 搜索框中 / 拓展坞底） */
+export function resetPageLayout() {
+  state.layoutCustom = null
+  state.clockPos = 'top'
+  state.searchPos = 'mid'
+  state.dockPos = 'bottom'
+  applyLayoutVars()
+  save()
+}
 /* 磁贴入场动画：fade（整体淡入）/ drop（依次落位），驱动 CSS [data-tile-enter] */
 watchEffect(() => {
   document.documentElement.dataset.tileEnter = state.tileEnter === 'drop' ? 'drop' : 'fade'
@@ -811,6 +888,9 @@ export function confirmOk() {
   } else if (c.kind === 'preset') {
     deletePreset(c.presetId)
     toast('预设已删除')
+  } else if (c.kind === 'layoutReset') {
+    resetPageLayout()
+    toast('页面布局已重置')
   }
   c.visible = false
   save()
@@ -820,7 +900,7 @@ export function confirmOk() {
 /* 外观相关字段（保存当前设置为自定义预设） */
 const PRESET_FIELDS = [
   'theme', 'style', 'accentColor', 'glassStrength', 'glassShine', 'cardRadius', 'tileDensity',
-  'searchRadius', 'searchOpacity', 'dockOpacity', 'iconShape', 'iconSize', 'iconGlow', 'tileHoverLift',
+  'searchRadius', 'searchOpacity', 'searchSwap', 'dockOpacity', 'iconShape', 'iconSize', 'iconGlow', 'tileHoverLift',
   'tileText', 'searchAnim', 'tileEnter', 'folderAnim', 'hour12', 'clockPos', 'clockColor', 'dateColor',
   'dateFormat', 'showDate', 'showSeconds', 'blink', 'clockFont', 'wallpaperVignette', 'dockEnabled', 'dockCount', 'linkOpenIn'
 ]
@@ -882,6 +962,8 @@ export function pruneEmptyFolders() {
 
 /* ---------- 链接增删改 ---------- */
 export function openAddForm(anchorEl, folderId) {
+  /* 实时预览模式：禁止打开添加/编辑表单 */
+  if (ui.preview) { toast('预览模式下不可添加链接'); return }
   ui.linkForm.mode = 'add'
   ui.linkForm.id = null
   ui.linkForm.url = ''
@@ -1018,6 +1100,8 @@ export function moveOutFolder(id) {
    协议白名单：链接 url 可能来自导入/同步的不可信数据，拒绝非 http/https（H1） */
 export function openLinkUrl(url) {
   if (!/^https?:\/\//i.test(url)) return
+  /* 实时预览模式：禁止访问链接，仅提示 */
+  if (ui.preview) { toast('预览模式下不可打开链接'); return }
   window.open(url, state.linkOpenIn === 'self' ? '_self' : '_blank')
 }
 export function deleteLink(id) {
@@ -1106,13 +1190,15 @@ let saveTimer = null
 function buildSnapshot() {
   return {
     theme: state.theme, style: state.style, hour12: state.hour12, showSeconds: state.showSeconds, blink: state.blink,
-    clockFont: state.clockFont, clockColor: state.clockColor, clockPos: state.clockPos,
+    clockFont: state.clockFont, clockColor: state.clockColor, clockPos: state.clockPos, searchPos: state.searchPos, dockPos: state.dockPos, layoutCustom: state.layoutCustom,
+    wallpaperFolderMode: state.wallpaperFolderMode, wallpaperFolderInterval: state.wallpaperFolderInterval,
+    wallpaperFolderIndex: state.wallpaperFolderIndex, wallpaperFolderCount: state.wallpaperFolderCount,
     showDate: state.showDate, dateFormat: state.dateFormat, dateColor: state.dateColor, autoColor: state.autoColor,
     engine: state.engine, engines: state.engines, dockEnabled: state.dockEnabled, dockCount: state.dockCount,
     accentColor: state.accentColor,
     glassStrength: state.glassStrength, cardRadius: state.cardRadius, tileDensity: state.tileDensity, linkOpenIn: state.linkOpenIn, searchRadius: state.searchRadius,
     iconShape: state.iconShape, iconSize: state.iconSize, iconGlow: state.iconGlow, tileHoverLift: state.tileHoverLift, tileText: state.tileText, glassShine: state.glassShine, tileEnter: state.tileEnter, folderAnim: state.folderAnim,
-    wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, searchAnim: state.searchAnim, dockOpacity: state.dockOpacity,
+    wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, searchAnim: state.searchAnim, searchSwap: state.searchSwap, dockOpacity: state.dockOpacity,
     links: state.links, folders: state.folders, customPresets: state.customPresets
   }
 }
@@ -1135,15 +1221,139 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/* ---------- 壁纸文件夹轮换（静态图片集合：每次打开 / 定时自动换） ---------- */
+const WALLPAPER_MAX_DIM = 3840
+function wphAsAlpha(ctx, w, h) {
+  try {
+    const d = ctx.getImageData(0, 0, w, h).data
+    for (let i = 3; i < d.length; i += 4) { if (d[i] < 250) return true }
+  } catch (e) { /* ignore */ }
+  return false
+}
+/* 图片降采样：≤3840 原图直存；超大图 canvas 缩放到 3840 内（JPEG .9 / 透明图 PNG） */
+async function normalizeFolderImage(file) {
+  if (!/^image\//.test(file.type)) return null
+  try {
+    const bmp = await createImageBitmap(file)
+    let blob
+    if (Math.max(bmp.width, bmp.height) <= WALLPAPER_MAX_DIM) {
+      blob = file
+    } else {
+      const scale = WALLPAPER_MAX_DIM / Math.max(bmp.width, bmp.height)
+      const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale)
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(bmp, 0, 0, w, h)
+      blob = await new Promise(res => c.toBlob(res, wphAsAlpha(ctx, w, h) ? 'image/png' : 'image/jpeg', 0.9))
+    }
+    bmp.close && bmp.close()
+    return blob || null
+  } catch (e) { return null }
+}
+let wallpaperRotateTimer = null
+function stopWallpaperRotate() { if (wallpaperRotateTimer) { clearInterval(wallpaperRotateTimer); wallpaperRotateTimer = null } }
+async function applyFolderWallpaper(i) {
+  if (i < 0 || i >= state.wallpaperFolderCount) return
+  const blob = await loadFolderImage(i).catch(() => null)
+  if (!blob) return
+  const old = state.wallpaper
+  if (old && old.startsWith('blob:')) URL.revokeObjectURL(old)
+  state.wallpaper = URL.createObjectURL(blob)
+  state.wallpaperType = 'image'
+  state.wallpaperFolderIndex = i
+}
+function startWallpaperRotate() {
+  stopWallpaperRotate()
+  if (state.wallpaperFolderMode !== 'timer' || state.wallpaperFolderCount < 2) return
+  wallpaperRotateTimer = setInterval(() => {
+    const n = state.wallpaperFolderCount
+    applyFolderWallpaper(((state.wallpaperFolderIndex + 1) % n + n) % n)
+  }, Math.max(1, state.wallpaperFolderInterval) * 60 * 1000)
+}
+/* 启动时调用（App onMounted）：按模式初始化壁纸 —— 每次打开随机一张；定时则应用当前张并开定时器 */
+export function initWallpaperRotate() {
+  if (!state.wallpaperFolderCount || !state.wallpaperFolderMode) return
+  if (state.wallpaperFolderMode === 'timer') {
+    applyFolderWallpaper(state.wallpaperFolderIndex >= 0 ? state.wallpaperFolderIndex : 0)
+    startWallpaperRotate()
+  } else {
+    applyFolderWallpaper(Math.floor(Math.random() * state.wallpaperFolderCount))
+  }
+}
+export function setWallpaperRotateMode(mode) {
+  stopWallpaperRotate()
+  state.wallpaperFolderMode = mode
+  if (mode !== 'off' && state.wallpaperFolderCount) {
+    applyFolderWallpaper(Math.floor(Math.random() * state.wallpaperFolderCount))
+  }
+  save()
+  if (mode === 'timer') startWallpaperRotate()
+}
+export function setWallpaperRotateInterval(mins) {
+  state.wallpaperFolderInterval = Math.max(1, +mins || 30)
+  save(); startWallpaperRotate()
+}
+export function rotateWallpaperNow() {
+  const n = state.wallpaperFolderCount
+  if (!n) return
+  applyFolderWallpaper(((state.wallpaperFolderIndex + 1) % n + n) % n)
+}
+/* 导入文件夹图片（File[]，过滤图片类型），存入 IndexedDB 并立即应用第一张 */
+export async function importWallpaperFolder(files) {
+  if (!files || !files.length) { toast('未选择图片', 'err'); return 0 }
+  const saved = []
+  for (let i = 0; i < files.length; i++) {
+    const blob = await normalizeFolderImage(files[i])
+    if (blob) { try { await saveFolderImage(blob, i) } catch (e) { continue } saved.push(i) }
+  }
+  if (!saved.length) { toast('未能读取文件夹中的图片', 'err'); return 0 }
+  const oldCount = state.wallpaperFolderCount
+  if (oldCount > saved.length) await clearFolderImages(saved.length, oldCount).catch(() => {})
+  state.wallpaperFolderCount = saved.length
+  if (!state.wallpaperFolderMode) state.wallpaperFolderMode = 'open'
+  save()
+  await applyFolderWallpaper(0)
+  startWallpaperRotate()
+  return saved.length
+}
+export async function clearWallpaperFolder() {
+  stopWallpaperRotate()
+  const n = state.wallpaperFolderCount
+  if (n) await clearFolderImages(0, n).catch(() => {})
+  const wasFolderActive = state.wallpaperFolderIndex >= 0
+  state.wallpaperFolderCount = 0
+  state.wallpaperFolderIndex = -1
+  state.wallpaperFolderMode = null
+  /* 仅当当前壁纸来自文件夹时才切换：清掉后恢复到之前的静态壁纸（IDB main）或默认，
+     保证与刷新后 loadWallpaperBlob 的结果一致（不丢失此前单独上传的静态壁纸） */
+  if (wasFolderActive && state.wallpaper && state.wallpaper.startsWith('blob:')) {
+    URL.revokeObjectURL(state.wallpaper)
+    state.wallpaper = null
+    state.wallpaperType = null
+    try {
+      const blob = await loadWallpaperBlob()
+      if (blob) {
+        state.wallpaper = URL.createObjectURL(blob)
+        state.wallpaperType = kindOfBlob(blob)
+      }
+    } catch (e) { /* ignore */ }
+  }
+  save()
+}
+
 /* ---------- 重置所有设置（保留 links/folders） ---------- */
 export function resetSettings() {
   const oldWallpaper = state.wallpaper
   const oldType = state.wallpaperType
+  const oldFolderCount = state.wallpaperFolderCount
+  stopWallpaperRotate()
   Object.assign(state, {
     theme: DEFAULT_SETTINGS.theme, style: DEFAULT_SETTINGS.style, hour12: DEFAULT_SETTINGS.hour12,
     showSeconds: DEFAULT_SETTINGS.showSeconds, blink: DEFAULT_SETTINGS.blink,
     clockFont: DEFAULT_SETTINGS.clockFont, clockColor: DEFAULT_SETTINGS.clockColor,
-    clockPos: DEFAULT_SETTINGS.clockPos, showDate: DEFAULT_SETTINGS.showDate,
+    clockPos: DEFAULT_SETTINGS.clockPos, searchPos: DEFAULT_SETTINGS.searchPos, dockPos: DEFAULT_SETTINGS.dockPos, layoutCustom: DEFAULT_SETTINGS.layoutCustom,
+    wallpaperFolderMode: DEFAULT_SETTINGS.wallpaperFolderMode, wallpaperFolderInterval: DEFAULT_SETTINGS.wallpaperFolderInterval,
+    wallpaperFolderIndex: DEFAULT_SETTINGS.wallpaperFolderIndex, wallpaperFolderCount: DEFAULT_SETTINGS.wallpaperFolderCount, showDate: DEFAULT_SETTINGS.showDate,
     dateFormat: DEFAULT_SETTINGS.dateFormat, dateColor: DEFAULT_SETTINGS.dateColor, autoColor: DEFAULT_SETTINGS.autoColor,
     engine: DEFAULT_SETTINGS.engine, wallpaper: DEFAULT_SETTINGS.wallpaper, wallpaperType: DEFAULT_SETTINGS.wallpaperType,
     dockEnabled: DEFAULT_SETTINGS.dockEnabled, dockCount: DEFAULT_SETTINGS.dockCount,
@@ -1151,7 +1361,7 @@ export function resetSettings() {
     glassStrength: DEFAULT_SETTINGS.glassStrength, cardRadius: DEFAULT_SETTINGS.cardRadius, tileDensity: DEFAULT_SETTINGS.tileDensity, linkOpenIn: DEFAULT_SETTINGS.linkOpenIn, searchRadius: DEFAULT_SETTINGS.searchRadius,
     iconShape: DEFAULT_SETTINGS.iconShape, iconSize: DEFAULT_SETTINGS.iconSize, iconGlow: DEFAULT_SETTINGS.iconGlow, tileHoverLift: DEFAULT_SETTINGS.tileHoverLift, tileText: DEFAULT_SETTINGS.tileText, glassShine: DEFAULT_SETTINGS.glassShine, tileEnter: DEFAULT_SETTINGS.tileEnter, folderAnim: DEFAULT_SETTINGS.folderAnim,
     wallpaperVignette: DEFAULT_SETTINGS.wallpaperVignette,
-    searchOpacity: DEFAULT_SETTINGS.searchOpacity, searchAnim: DEFAULT_SETTINGS.searchAnim, dockOpacity: DEFAULT_SETTINGS.dockOpacity
+    searchOpacity: DEFAULT_SETTINGS.searchOpacity, searchAnim: DEFAULT_SETTINGS.searchAnim, searchSwap: DEFAULT_SETTINGS.searchSwap, dockOpacity: DEFAULT_SETTINGS.dockOpacity
   })
   /* 重置设置同时清掉 IndexedDB 壁纸，并释放本页 objectURL。
      video 元素正在解码时立即 revoke 会报 Failed to load resource，故延迟 1s 释放 */
@@ -1162,6 +1372,7 @@ export function resetSettings() {
     }
     clearWallpaperBlob().catch(() => {})
   }
+  if (oldFolderCount) clearFolderImages(0, oldFolderCount).catch(() => {})
   ui.searchFilter = ''
   save()
 }

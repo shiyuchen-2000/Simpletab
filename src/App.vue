@@ -1,8 +1,9 @@
 <script setup>
 import { computed, watch, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, dockVisible, isVideoWallpaper } from './store'
+import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, dockVisible, isVideoWallpaper, initWallpaperRotate } from './store'
 import ClockView from './components/ClockView.vue'
 import SearchBar from './components/SearchBar.vue'
+import LayoutEditor from './components/LayoutEditor.vue'
 import LinkGrid from './components/LinkGrid.vue'
 import SettingsGear from './components/SettingsGear.vue'
 import SettingsModal from './components/SettingsModal.vue'
@@ -20,13 +21,7 @@ import TourGuide from './components/TourGuide.vue'
 
 const homeClasses = computed(() => ({
   hidden: state.view !== 'home',
-  'home-leaving': ui.homeLeaving,
-  'pos-top': state.clockPos === 'top',
-  'pos-mid': state.clockPos === 'mid',
-  'pos-bottom': state.clockPos === 'bottom',
-  'pos-left': state.clockPos === 'left',
-  'pos-right': state.clockPos === 'right',
-  'dock-lift': dockVisible()
+  'home-leaving': ui.homeLeaving
 }))
 
 const bgStyle = computed(() => {
@@ -68,9 +63,17 @@ watch(() => state.view, async v => {
   el.classList.add('view-enter')
 })
 
-const INTERACTIVE = '.tile, #gearZone, .dropdown, .modal-backdrop, .overlay-form, .context-menu, .confirm-backdrop, .folder-backdrop, .toast'
+const INTERACTIVE = '.tile, #gearZone, .dropdown, .modal-backdrop, .overlay-form, .context-menu, .confirm-backdrop, .folder-backdrop, .toast, .preview-back'
 
 function onContextMenu(e) {
+  /* 实时预览模式：仅保留主页空白右键切视图，其余（磁贴/拓展坞/文件夹右键菜单）一律禁用 */
+  if (ui.preview) {
+    if (state.view === 'home' && !e.target.closest('.search-bar') && !e.target.closest('.dock-item')) {
+      e.preventDefault(); setView('links'); return
+    }
+    e.preventDefault()
+    return
+  }
   if (state.view === 'home') {
     if (ui.tourActive) {
       // 引导期间：仅当前步骤明确允许（「进入快捷链接页」步骤）时右键空白才切视图，
@@ -94,6 +97,17 @@ function onContextMenu(e) {
 }
 
 function onKeydown(e) {
+  // 空格：主页无焦点输入时直接聚焦搜索框
+  if (e.key === ' ' && state.view === 'home' && !ui.tourActive) {
+    const t = e.target
+    const tag = t && t.tagName
+    if (tag && tag !== 'BODY' && tag !== 'HTML') return   // 焦点在控件上不劫持
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    e.preventDefault()
+    const inp = document.querySelector('#searchBar input')
+    if (inp) inp.focus()
+    return
+  }
   if (e.key !== 'Escape') return
   if (ui.tourActive) return   // 新手指引期间锁定 Esc 切视图，避免打断引导
   if (state.view === 'links') {
@@ -107,6 +121,13 @@ function onClockClick(e) {
   if (state.view !== 'home') return
   e.stopPropagation() // 阻止冒泡到 document 空白点击逻辑
   setView('links')
+}
+
+// 返回设置：退出实时预览，切回主页并重新打开设置弹窗
+function exitPreview() {
+  ui.preview = false
+  setView('home')
+  ui.modal = 'settings'
 }
 
 // 空白点击判断：用 composedPath 判断是否点到交互区。
@@ -138,6 +159,7 @@ onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   document.addEventListener('click', onClick)
   reduceMq.addEventListener?.('change', onReduceChange)
+  initWallpaperRotate()   // 文件夹壁纸轮换：每次打开随机 / 定时
 })
 onBeforeUnmount(() => {
   document.removeEventListener('contextmenu', onContextMenu)
@@ -200,4 +222,11 @@ onBeforeUnmount(() => {
   <ToastView />
   <!-- 新手指引 -->
   <TourGuide />
+  <!-- 页面布局全屏编辑器 -->
+  <LayoutEditor />
+  <!-- 实时预览：返回设置按钮 -->
+  <button v-if="ui.preview" class="preview-back" @click="exitPreview">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    返回设置
+  </button>
 </template>

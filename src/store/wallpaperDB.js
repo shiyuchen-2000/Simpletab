@@ -48,6 +48,28 @@ export function clearWallpaperBlob() {
   return txn('readwrite', s => s.delete(KEY))
 }
 
+/* ---------- 文件夹轮换壁纸：多图，key 为 folder/0..N-1（仅静态图片） ---------- */
+const FOLDER_PREFIX = 'folder/'
+export function saveFolderImage(blob, i) {
+  return txn('readwrite', s => s.put(blob, FOLDER_PREFIX + i))
+}
+export function loadFolderImage(i) {
+  return txn('readonly', s => s.get(FOLDER_PREFIX + i))
+}
+/* 批量删除 [from, to) 索引的图片（单事务，失败静默） */
+export async function clearFolderImages(from, to) {
+  const d = await db()
+  return new Promise(resolve => {
+    try {
+      const t = d.transaction(STORE, 'readwrite')
+      const st = t.objectStore(STORE)
+      for (let i = from; i < to; i++) st.delete(FOLDER_PREFIX + i)
+      t.oncomplete = () => resolve()
+      t.onerror = () => resolve()
+    } catch (e) { resolve() }
+  })
+}
+
 /* Blob → 壁纸类型：视频/图片。type 缺失或未知按图片处理（background-image 可尝试渲染） */
 export const kindOfBlob = blob =>
   (blob && blob.type && blob.type.startsWith('video/')) ? 'video' : 'image'

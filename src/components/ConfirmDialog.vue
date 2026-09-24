@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { ui, confirmOk, confirmCancel } from '../store'
 
-const okText = computed(() => ui.confirm.kind === 'reset' ? '重置' : '删除')
+const okText = computed(() => (ui.confirm.kind === 'reset' || ui.confirm.kind === 'layoutReset') ? '重置' : '删除')
 </script>
 
 <template>

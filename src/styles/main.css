@@ -148,21 +148,15 @@ body.links-open .bg-tint{opacity:1;}
 /* ============ 时钟（两页统一固定定位，位置预设一致） ============ */
 #clockWrap{
   position:fixed;z-index:2;text-align:center;pointer-events:none;
-  transition:top .5s var(--ease),bottom .5s var(--ease),left .5s var(--ease),right .5s var(--ease),transform .5s var(--ease);
+  left:var(--clock-x,50%);top:var(--clock-y,9%);transform:translate(-50%,-50%);
+  scale:var(--clock-scale,1);
+  transition:left .5s var(--ease),top .5s var(--ease),transform .5s var(--ease);
   animation:fadeOnly .5s ease both;
 }
-#clockWrap[data-pos="top"]{left:50%;top:6vh;transform:translateX(-50%);text-align:center;}
-#clockWrap[data-pos="mid"]{left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;}
-#clockWrap[data-pos="bottom"]{left:50%;bottom:6vh;transform:translateX(-50%);text-align:center;}
-#clockWrap[data-pos="left"]{left:7vw;top:10vh;transform:none;text-align:left;}
-#clockWrap[data-pos="right"]{right:7vw;top:10vh;transform:none;text-align:right;}
-/* 链接页右上时钟：下移让出顶部齿轮（齿轮高 46px+间距），矮窗口避免重叠 */
-body.links-open #clockWrap[data-pos="right"]{top:max(10vh,80px);}
+/* 链接页（磁贴页）不显示时钟：避免与磁贴叠加；时钟仅在主页显示 */
+body.links-open #clockWrap{display:none;}
 /* 搜索页点击时间区域 → 进入链接页（仅主页放开点击） */
 body:not(.links-open) #clockWrap{pointer-events:auto;cursor:pointer;}
-/* 底部预设且拓展坞可见时：时钟上移让位（dock 高约68px+间距），搜索框同步上移，避免重叠 */
-body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh + 112px);}
-#homeSection.pos-bottom.dock-lift{padding-bottom:calc(6vh + 112px + 21vh);}
 .clock-time{
   font-size:clamp(3.5rem,min(13vw,16vh),8.5rem);
   font-weight:300;
@@ -225,11 +219,11 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
   #homeSection.pos-bottom.dock-lift{padding-bottom:calc(4vh + 90px + 16vh);}
   #homeSection.pos-left,#homeSection.pos-right{padding-top:26vh;}
 }
-.search-wrap{position:relative;}
+.search-wrap{position:fixed;left:var(--search-x,50%);top:var(--search-y,40%);transform:translate(-50%,-50%);z-index:2;transition:transform .5s var(--ease);}
 .search-bar{
   position:relative;isolation:isolate;
   display:flex;align-items:center;gap:.6rem;
-  width:min(400px,78vw);height:58px;
+  width:var(--search-w,400px);height:58px;
   padding:0 .6rem 0 1.2rem;
   border-radius:var(--search-radius,999px);
   background:var(--search-bg);
@@ -237,6 +231,8 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
   box-shadow:0 12px 38px rgba(0,30,34,.26);
   transition:width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
   cursor:text;
+  /* 独立合成层：避免宽度动画期间毛玻璃 ::before 每帧重采样导致边缘抖动 */
+  transform:translateZ(0);will-change:width;
 }
 /* 毛玻璃放静态伪元素：主页进入动画已改纯位移（不动 opacity），backdrop 采样进入即就绪 */
 .search-bar::before{
@@ -245,15 +241,13 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
   backdrop-filter:blur(22px) saturate(170%);
   -webkit-backdrop-filter:blur(22px) saturate(170%);
   transition:backdrop-filter .4s var(--ease), -webkit-backdrop-filter .4s var(--ease);
+  transform:translateZ(0);
 }
-.search-bar:hover{width:min(620px,92vw);background:var(--search-bg-hover);}
-.search-bar:focus-within{width:min(620px,92vw);background:var(--search-bg-focus);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28),0 16px 48px rgba(0,30,34,.32);}
-.search-bar:hover::before,.search-bar:focus-within::before{
-  backdrop-filter:blur(28px) saturate(180%);
-  -webkit-backdrop-filter:blur(28px) saturate(180%);
-}
+.search-bar:hover:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);background:var(--search-bg-hover);}
+.search-bar:focus-within:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);background:var(--search-bg-focus);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28),0 16px 48px rgba(0,30,34,.32);}
+/* 注：hover/focus 不再改变 backdrop-filter 强度，避免宽度过渡期间毛玻璃边缘采样抖动 */
 /* 输入过内容后保持展开，避免失焦即收缩 */
-.search-bar.has-text{width:min(620px,92vw);}
+.search-bar.has-text:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);}
 .search-bar.has-text input{opacity:1;pointer-events:auto;}
 .search-bar .s-ico{flex:none;display:grid;place-items:center;}
 .search-bar .s-ico svg{grid-area:1/1;transform-origin:center;transition:transform .4s var(--ease),opacity .22s var(--ease);}
@@ -265,6 +259,14 @@ body.clock-pos-bottom.dock-visible #clockWrap[data-pos="bottom"]{bottom:calc(6vh
 .search-bar input::placeholder{color:var(--placeholder);transition:opacity .3s var(--ease);}
 .search-bar input:focus::placeholder{opacity:.45;}
 .search-bar:hover input,.search-bar:focus-within input{opacity:1;pointer-events:auto;}
+/* 搜索框 hover/有内容展开方向自适应：位置偏左向右展开、偏右向左展开、居中双向。
+   通过平移 .search-wrap 半个展开增量（220/2=110px）固定一侧边缘，不干扰搜索框自身 3D 动画 */
+.search-wrap:has(.search-bar[data-expand="r"]:hover:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="r"]:focus-within:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="r"].has-text:not(.no-expand)){transform:translate(-50%,-50%) translateX(110px);}
+.search-wrap:has(.search-bar[data-expand="l"]:hover:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="l"]:focus-within:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="l"].has-text:not(.no-expand)){transform:translate(-50%,-50%) translateX(-110px);}
 /* ============ 搜索框 3D 动画（设置 → 搜索框动画：无 / 沉入 / 浮升） ============ */
 /* 沉入式：常态微俯视浮起，聚焦沿 Z 轴下沉 + 扶正 + accent 辉光 */
 html[data-search-anim="sink"] .search-bar{
@@ -614,6 +616,12 @@ body.links-open #gearZone{display:block;animation:zoomIn .45s var(--ease) both;}
 .changelog ul{list-style:none;padding:0;margin:0;}
 .changelog li{position:relative;font-size:.8rem;color:var(--text);line-height:1.62;padding-left:.85rem;}
 .changelog li::before{content:"";position:absolute;left:0;top:.58em;width:5px;height:5px;border-radius:50%;background:var(--accent);}
+/* 更新日志标签：新增绿底 / 修复黄底矩形 */
+.changelog .cl-tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:.66rem;font-weight:600;line-height:1.55;margin-right:6px;vertical-align:1px;letter-spacing:.02em;}
+.changelog .cl-new{background:rgba(34,197,94,.16);color:#15803d;}
+.changelog .cl-fix{background:rgba(234,179,8,.18);color:#a16207;}
+[data-theme="dark"] .changelog .cl-new{color:#4ade80;}
+[data-theme="dark"] .changelog .cl-fix{color:#facc15;}
 /* 关于页：外窗尺寸固定，紧凑头部 + 日志主体；滚动日志时聚焦只隐藏 hero 让 changelog 变大 */
 .about-modal{display:flex;flex-direction:column;height:min(78vh,560px);overflow:hidden;text-align:left;}
 .about-modal .m-head{flex:none;}
@@ -924,7 +932,7 @@ body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
 
 /* ============ 捷径拓展坞（底部，仅图标） ============ */
 .dock{
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:30;
+  position:fixed;left:var(--dock-x,50%);top:var(--dock-y,92%);transform:translate(-50%,-50%);z-index:30;
   display:flex;gap:14px;align-items:center;
   /* 窄窗口兜底：超宽时允许横向滚动，避免图标被裁 */
   max-width:calc(100vw - 24px);overflow-x:auto;
@@ -1115,19 +1123,8 @@ body:not(.links-open) .dock.dock-visible{display:flex;}
 [data-theme="dark"][data-style="borderless"] .folder-panel,[data-theme="dark"][data-style="borderless"] .tour-bubble,
 [data-theme="dark"][data-style="borderless"] .toast{border-color:rgba(255,255,255,.14);}
 
-/* 设置下拉列表打开时，右上时钟左移避让（不消失）：右边缘对齐磁贴第一排最后一个图标；
-   --clock-right 由 SettingsGear 动态计算，未计算时兜底左移 264px */
-body:has(.dropdown.show) #clockWrap[data-pos="right"]{right:var(--clock-right, calc(7vw + 264px));}
-
-/* ===== 无界：拓展坞移到搜索框下方，水平对齐跟随时钟位置（即搜索框对齐） ===== */
-[data-style="borderless"] .dock{bottom:auto;max-width:calc(100vw - 48px);}
-/* 居中位置：dock 与搜索框同轴居中，垂直在搜索框下方 */
-[data-style="borderless"] body.clock-pos-top .dock{top:calc(28vh + 58px + 26px);left:50%;transform:translateX(-50%);}
-[data-style="borderless"] body.clock-pos-mid .dock{top:calc(55vh + 58px + 26px);left:50%;transform:translateX(-50%);}
-/* 左上 / 右上：dock 与搜索框同侧对齐（8vw 边距），垂直在搜索框下方 */
-[data-style="borderless"] body.clock-pos-left .dock{top:calc(32vh + 58px + 26px);left:8vw;transform:none;justify-content:flex-start;}
-[data-style="borderless"] body.clock-pos-right .dock{top:calc(32vh + 58px + 26px);right:8vw;transform:none;justify-content:flex-end;}
-/* 底部时钟位置：搜索框本就靠底，dock 保持底部定位不动 */
+/* 无界：拓展坞透明化（位置由独立布局坐标控制） */
+[data-style="borderless"] .dock{max-width:calc(100vw - 48px);}
 
 /* 无界：添加/编辑链接表单更不透明，避免与背景图标混合 */
 [data-style="borderless"] .overlay-form{background:rgba(255,255,255,.94);}
@@ -1136,12 +1133,45 @@ body:has(.dropdown.show) #clockWrap[data-pos="right"]{right:var(--clock-right, c
 /* 无界：时钟宽度与「缩短状态」的搜索框一致（min(400px,78vw)），上下成列对齐 */
 [data-style="borderless"] #clockWrap{width:min(400px,78vw);}
 
-/* 无界：底部时钟位置时，dock 定位在搜索框上方（此前 bottom:auto 未给位置会跑到页面顶部） */
-[data-style="borderless"] body.clock-pos-bottom .dock{top:calc(100vh - 6vh - 58px - 92px);left:50%;transform:translateX(-50%);}
-
 /* 自适应(auto)图标：字母兜底背景亮色=白、暗色=黑，让透明 favicon 更协调；text 模式保留品牌渐变 */
 [data-theme="light"] .tile .t-ico[data-ic="auto"], [data-theme="light"] .dock-item[data-ic="auto"]{background:#fff;color:#1a2b30;box-shadow:0 6px 16px rgba(13,43,46,.12);}
 [data-theme="dark"] .tile .t-ico[data-ic="auto"], [data-theme="dark"] .dock-item[data-ic="auto"]{background:#0b0f14;color:#eef4ff;box-shadow:0 6px 16px rgba(0,0,0,.35);}
 
 /* 拖拽换位动画（TransitionGroup move）：磁贴位置变化平滑过渡 */
 .tile-move{transition:transform .32s var(--ease) !important;}
+
+/* 搜索栏：交换搜索引擎与搜索图标位置（引擎在左、图标在右，图标内收） */
+/* 图标脱离 flex 流、绝对定位于右缘：宽度展开动画不重排图标 */
+[data-search-swap="1"] .search-bar{padding:0 3rem 0 .8rem;}
+[data-search-swap="1"] .search-bar .engine-wrap{order:0;}
+[data-search-swap="1"] .search-bar input{order:1;}
+[data-search-swap="1"] .search-bar .s-ico{position:absolute;right:1.1rem;top:50%;transform:translateY(-50%);}
+/* 时钟右上（搜索框靠右）：hover 展开保留平滑动画，但动画期间毛玻璃降级为实色背景，避免采样抖动 */
+body.clock-pos-right .search-bar{transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;}
+body.clock-pos-right .search-bar::before{transition:none;}
+body.clock-pos-right .search-bar:hover::before,
+body.clock-pos-right .search-bar:focus-within::before{backdrop-filter:none;-webkit-backdrop-filter:none;}
+body.clock-pos-right .search-bar:hover,
+body.clock-pos-right .search-bar:focus-within{background:rgba(15,22,32,.9);}
+[data-theme="light"] body.clock-pos-right .search-bar:hover,
+[data-theme="light"] body.clock-pos-right .search-bar:focus-within{background:rgba(255,255,255,.96);}
+
+/* 窄屏：搜索框回退 vw 宽度，防止固定像素溢出 */
+@media (max-width:700px){
+  .search-bar{width:min(var(--search-w,400px),78vw);}
+  .search-bar:hover:not(.no-expand),.search-bar:focus-within:not(.no-expand),.search-bar.has-text:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);}
+}
+
+/* ============ 实时预览模式 ============ */
+/* 预览模式隐藏齿轮：不可再打开设置下拉（由返回按钮退出预览） */
+body.preview #gearZone{display:none;}
+.preview-back{
+  position:fixed;top:20px;right:24px;z-index:1500;
+  display:inline-flex;align-items:center;gap:9px;
+  padding:.85rem 1.2rem;border-radius:14px;font-size:.95rem;font-weight:600;
+  color:var(--accent-on);background:var(--accent);border:none;cursor:pointer;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);
+  transition:transform .2s var(--ease),box-shadow .2s,filter .2s;
+}
+.preview-back:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(0,0,0,.35);filter:brightness(1.06);}
+
