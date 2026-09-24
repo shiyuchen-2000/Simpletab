@@ -219,7 +219,7 @@ body:not(.links-open) #clockWrap{pointer-events:auto;cursor:pointer;}
   #homeSection.pos-bottom.dock-lift{padding-bottom:calc(4vh + 90px + 16vh);}
   #homeSection.pos-left,#homeSection.pos-right{padding-top:26vh;}
 }
-.search-wrap{position:fixed;left:var(--search-x,50%);top:var(--search-y,40%);transform:translate(-50%,-50%);z-index:2;transition:transform .5s var(--ease);}
+.search-wrap{position:fixed;left:var(--search-x,50%);top:var(--search-y,40%);transform:translate(-50%,-50%);z-index:35;transition:transform .5s var(--ease);}
 .search-bar{
   position:relative;isolation:isolate;
   display:flex;align-items:center;gap:.6rem;

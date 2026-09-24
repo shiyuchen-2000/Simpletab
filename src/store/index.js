@@ -723,6 +723,8 @@ export function cycleEngine() {
   setTimeout(() => { ui.flip = false }, 500)
 }
 export function doSearch() {
+  /* 实时预览模式：禁止搜索跳转（与禁止访问链接一致） */
+  if (ui.preview) { toast('预览模式下不可搜索'); return }
   const q = ui.searchQuery.trim()
   if (!q) return
   const eng = state.engines.find(x => x.key === state.engine)
