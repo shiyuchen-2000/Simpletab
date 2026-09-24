@@ -140,9 +140,10 @@ body.links-open .bg-tint{opacity:1;}
 /* ============ 顶层容器 ============ */
 /* 两个视图常驻叠放在同一格（grid）：切换只改可见性，毛玻璃合成层保留不重建，
    避免每次进入链接页所有磁贴 backdrop 重新采样的"材质加载"感 */
-#app{position:relative;z-index:40;height:100%;display:grid;}
-/* #app 创建层叠上下文：内部元素（如搜索框及引擎下拉）z-index 被整体限制在此值。
-   需高于拓展坞(z-index:30)，否则 dock 会覆盖搜索框下方的引擎下拉 */
+#app{position:relative;height:100%;display:grid;}
+/* 不设 z-index：避免创建层叠上下文把内部元素（搜索框及引擎下拉）整体压住。
+   搜索框 z-index:35 高于拓展坞(30)，引擎下拉不被遮挡；
+   拓展坞(30)仍高于磁贴/时钟(≤2)，保持可点不被页面内容覆盖 */
 #homeSection,#linksSection{grid-area:1/1;}
 #homeSection{align-self:stretch;}
 #linksSection{align-self:start;}
