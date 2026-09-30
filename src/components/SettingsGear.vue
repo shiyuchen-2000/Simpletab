@@ -1,9 +1,16 @@
 <script setup>
+import { watch } from 'vue'
 import { ui, startTour, setView } from '../store'
 
 function onGearClick() {
-  ui.dropdownOpen = !ui.dropdownOpen
+  if (ui.dropdownOpen) ui.dropdownClosing = true   // 关闭带退出动画
+  else ui.dropdownOpen = true
 }
+/* 下拉关闭动画：先播退出动画（closing），动画结束再真正隐藏 */
+watch(() => ui.dropdownClosing, v => {
+  if (!v) return
+  setTimeout(() => { ui.dropdownOpen = false; ui.dropdownClosing = false }, 200)
+})
 function openPanel(name) {
   ui.dropdownOpen = false
   /* 打开任意设置面板时关闭新建/编辑链接弹窗，避免两个浮层叠加 */
@@ -39,7 +46,7 @@ function openInstall() {
   </div>
 
   <!-- 设置下拉 -->
-  <div class="dropdown" :class="{ show: ui.dropdownOpen }">
+  <div class="dropdown" :class="{ show: ui.dropdownOpen, closing: ui.dropdownClosing }">
     <button class="d-item" @click="openPanel('settings')">
       <span class="di">
         <svg class="di-a" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>

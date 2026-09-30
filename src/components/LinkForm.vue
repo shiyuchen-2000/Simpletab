@@ -4,7 +4,7 @@ import { state, ui, saveForm, saveBatchForm, closeForm } from '../store'
 
 const titleText = computed(() => ui.linkForm.batch ? '批量新增' : (ui.linkForm.mode === 'add' ? '添加网站' : '编辑网站'))
 const okText = computed(() => ui.linkForm.batch ? '批量添加' : (ui.linkForm.mode === 'add' ? '添加' : '保存'))
-const formStyle = computed(() => ({ top: ui.linkForm.top + 'px', left: ui.linkForm.left + 'px' }))
+const formStyle = computed(() => ({ top: ui.linkForm.top + 'px', left: ui.linkForm.left + 'px', transformOrigin: ui.linkForm.origin }))
 
 const folderOptions = computed(() => {
   const arr = [{ value: '', label: '无文件夹' }]
@@ -48,7 +48,7 @@ function onKeydown(e) { if (e.key === 'Escape') closeForm() }
 </script>
 
 <template>
-  <div class="overlay-form" v-show="ui.linkForm.visible" :style="formStyle" @keydown="onKeydown">
+  <div class="overlay-form" :class="{ closing: ui.linkForm.closing }" v-show="ui.linkForm.visible" :style="formStyle" @keydown="onKeydown">
     <div class="f-title">{{ titleText }}</div>
     <div class="seg f-mode" v-if="ui.linkForm.mode === 'add'">
       <button :class="{ on: !ui.linkForm.batch }" @click="ui.linkForm.batch = false">单个新增</button>

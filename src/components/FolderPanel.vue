@@ -22,6 +22,9 @@ const panelOrigin = ref('50% 50%')
 
 watch(() => ui.folderOpenId, async (id) => {
   editing.value = false
+  /* 打开时保留当前文件夹：关闭后 folderOpenId 清空，computed 回退到 displayFolder，
+     面板才不立即卸载，能完整播放关闭动画（翻转落回磁贴） */
+  if (id) displayFolder.value = state.folders.find(f => f.id === id) || null
   if (!id) return
   // 打开时 folder 已由 computed 同步取当前文件夹，这里只需更新展开锚点
   const tile = document.querySelector(`.folder-tile[data-fid="${id}"]`)
@@ -36,6 +39,9 @@ watch(() => ui.folderOpenId, async (id) => {
 // 动画结束后清掉 displayFolder（打开时 folder 走 folderOpenId，仅关闭动画回退用 displayFolder）
 function onAnimationEnd(e) {
   if (e.target !== e.currentTarget) return
+  /* 仅关闭动画（backdrop fadeOut）结束时清 displayFolder；
+     打开动画（fadeIn）结束不清，否则关闭时面板无内容可回退、直接卸载，关闭动画失效 */
+  if (!ui.folderClosing) return
   displayFolder.value = null
 }
 

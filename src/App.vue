@@ -146,6 +146,14 @@ function onClick(e) {
     return
   }
   if (state.view !== 'links') return
+  /* 链接页有浮层（设置下拉 / 新增编辑表单）时：点击空白先关闭浮层，不切视图。
+     交互区内点击（右键菜单项触发编辑/新增、下拉项、磁贴等）用 composedPath 判断，不触发关闭 */
+  if (ui.dropdownOpen || ui.linkForm.visible) {
+    if (isInteractiveHit(e)) return
+    if (ui.dropdownOpen) ui.dropdownClosing = true
+    if (ui.linkForm.visible) closeForm()
+    return
+  }
   if (ui.folderOpenId || ui.folderClosing) {
     if (e.target.classList.contains('folder-backdrop')) closeFolder()
     else if (!e.target.closest('.context-menu')) closeCtx()   // 文件夹内点空白 / 磁贴：关闭右键菜单

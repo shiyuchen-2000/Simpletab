@@ -231,9 +231,15 @@ const shapeOptions = [['rounded', '圆角'], ['square', '方形'], ['squircle', 
 const tileTextOptions = [['always', '始终显示'], ['hover', '悬浮显示'], ['none', '不显示']]
 /* 开关行字段映射（state 里的布尔字段名） */
 const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor', searchSwap: 'searchSwap' }
-/* Fluent 风格下固定的材质类设置项：在 CSS [data-style="fluent"] 块中被 Fluent 规范值覆盖，故置灰不可调 */
+/* 材质类设置项：在 Fluent / 无界下按需置灰。
+   Fluent：全部固定为 Fluent 规范值（CSS [data-style="fluent"] 覆盖）；置灰不可调。
+   无界：仅去卡片化相关项固定；搜索框保持玻璃背景，其透明度 / 圆角仍可调 */
 const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
-const rowFixed = r => (state.style === 'fluent' || state.style === 'borderless') && FIXED_ROWS.includes(r.id)
+const rowFixed = r => {
+  if (state.style === 'fluent') return FIXED_ROWS.includes(r.id)
+  if (state.style === 'borderless') return FIXED_ROWS.includes(r.id) && !['searchOpacity', 'searchRadius'].includes(r.id)
+  return false
+}
 
 const clockColorVal = computed(() => state.clockColor || (resolvedTheme.value === 'dark' ? '#f2fdfb' : '#0d2b2e'))
 const dateColorVal = computed(() => state.dateColor || (resolvedTheme.value === 'dark' ? '#e9fbf9' : '#0d2b2e'))

@@ -310,12 +310,12 @@ const ui = reactive({
   now: new Date(),
   homeLeaving: false,
   linksLeaving: false,
-  dropdownOpen: false, layoutEdit: false, preview: false,
+  dropdownOpen: false, dropdownClosing: false, layoutEdit: false, preview: false,
   modal: null,                 // 'settings' | 'wallpaper' | 'about' | null
   searchQuery: '',
   searchFilter: '',
   flip: false,
-  linkForm: { visible: false, mode: 'add', id: null, url: '', name: '', batch: false, batchText: '', folderSel: '', newFolder: '', err: '', top: 0, left: 0 },
+  linkForm: { visible: false, closing: false, mode: 'add', id: null, url: '', name: '', batch: false, batchText: '', folderSel: '', newFolder: '', err: '', top: 0, left: 0, origin: '50% 50%' },
   ctxMenu: { visible: false, x: 0, y: 0, items: [], linkId: null, inFolder: false },
   confirm: { visible: false, title: '', desc: '', kind: null, linkId: null, folderId: null, dockId: null, presetId: null },
   folderOpenId: null,
@@ -534,7 +534,7 @@ watchEffect(() => {
 })
 /* ---------- 页面布局：时钟/搜索框/拓展坞各自独立坐标（自定义优先，否则按位置预设） ---------- */
 const LAYOUT_POS = {
-  top:    { x: 50, y: 9 },
+  top:    { x: 50, y: 15 },
   mid:    { x: 50, y: 40 },
   bottom: { x: 50, y: 92 },
   left:   { x: 20, y: 20 },
@@ -927,9 +927,13 @@ export function closeFolder() {
   ui.folderOpenId = null
   ui.folderClosing = true
   clearTimeout(folderCloseTimer)
-  folderCloseTimer = setTimeout(() => { ui.folderClosing = false }, 240)
+  /* 保持 closing 状态足够久，覆盖 3D 翻转关闭动画（0.4s）完整播放后再复位 */
+  folderCloseTimer = setTimeout(() => { ui.folderClosing = false }, 460)
 }
 export function openFolder(fid) {
+  /* 切换视图的瞬间不打开文件夹：drop 模式下 setView('home') 延迟 560ms 才改 view，
+     需同时检查 ui.linksLeaving（切主页立即置位）避免残留磁贴被误点 */
+  if (state.view !== 'links' || ui.linksLeaving) return
   clearTimeout(folderCloseTimer)
   ui.folderClosing = false
   ui.folderOpenId = fid
@@ -966,6 +970,7 @@ export function pruneEmptyFolders() {
 export function openAddForm(anchorEl, folderId) {
   /* 实时预览模式：禁止打开添加/编辑表单 */
   if (ui.preview) { toast('预览模式下不可添加链接'); return }
+  ui.linkForm.closing = false   // 打开时重置关闭动画状态，避免残留 closing 类
   ui.linkForm.mode = 'add'
   ui.linkForm.id = null
   ui.linkForm.url = ''
@@ -975,12 +980,22 @@ export function openAddForm(anchorEl, folderId) {
   ui.linkForm.folderSel = folderId || ''
   ui.linkForm.newFolder = ''
   ui.linkForm.err = ''
-  ui.linkForm.visible = true
-  nextTick(() => positionForm(anchorEl))
+  showForm(anchorEl)
+}
+/* 展示表单：若已打开（编辑 ⇄ 新增切换）先隐藏再显示，重播打开动画 */
+function showForm(anchorEl) {
+  if (ui.linkForm.visible) {
+    ui.linkForm.visible = false
+    nextTick(() => { ui.linkForm.visible = true; positionForm(anchorEl) })
+  } else {
+    ui.linkForm.visible = true
+    nextTick(() => positionForm(anchorEl))
+  }
 }
 export function openEditForm(anchorEl, id) {
   const l = state.links.find(x => x.id === id)
   if (!l) return
+  ui.linkForm.closing = false   // 打开时重置关闭动画状态
   ui.linkForm.mode = 'edit'
   ui.linkForm.id = id
   ui.linkForm.url = l.url
@@ -988,8 +1003,7 @@ export function openEditForm(anchorEl, id) {
   ui.linkForm.folderSel = l.folderId || ''
   ui.linkForm.newFolder = ''
   ui.linkForm.err = ''
-  ui.linkForm.visible = true
-  nextTick(() => positionForm(anchorEl))
+  showForm(anchorEl)
 }
 function positionForm(anchorEl) {
   if (!anchorEl) return
@@ -1009,8 +1023,15 @@ function positionForm(anchorEl) {
   // 水平居中且不越出视口：极窄窗口下 clamp 到 [0, vw-fw]，避免负坐标出屏
   const maxLeft = Math.max(margin, window.innerWidth - fw - margin)
   ui.linkForm.left = Math.max(0, Math.min(Math.max(margin, r.left + r.width / 2 - fw / 2), maxLeft))
+  /* 展开锚点：transform-origin 指向触发磁贴中心，打开动画从磁贴位置展开、关闭收回磁贴 */
+  ui.linkForm.origin = `${Math.round(r.left + r.width / 2 - ui.linkForm.left)}px ${Math.round(r.top + r.height / 2 - top)}px`
 }
-export function closeForm() { ui.linkForm.visible = false }
+/* 关闭新增/编辑表单：先播退出动画（closing），动画结束再真正隐藏 */
+export function closeForm() {
+  if (!ui.linkForm.visible || ui.linkForm.closing) return
+  ui.linkForm.closing = true
+  setTimeout(() => { ui.linkForm.visible = false; ui.linkForm.closing = false }, 190)
+}
 export function saveForm() {
   const url = normalizeUrl(ui.linkForm.url)
   if (!url) { ui.linkForm.err = '网址无效，请检查后重试'; return }

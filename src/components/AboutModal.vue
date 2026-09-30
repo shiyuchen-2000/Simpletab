@@ -6,6 +6,20 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上。items 为 { t, tag }，tag: 'new' 新增（绿）/ 'fix' 修复（黄），缺省无标签 */
 const CHANGES = [
   {
+    ver: 'v1.7.1',
+    items: [
+      { t: '新增 / 编辑表单从触发磁贴锚点展开，关闭收回磁贴' },
+      { t: '无界模式解锁搜索框透明度 / 圆角' },
+      { t: '预览模式下禁止搜索', tag: 'fix' },
+      { t: '引擎下拉被拓展坞遮挡（#app 层叠上下文）', tag: 'fix' },
+      { t: '「依次落位」动画下磁贴悬浮动效失效', tag: 'fix' },
+      { t: '磁贴上浮被容器边缘裁切', tag: 'fix' },
+      { t: '文件夹 3D 翻转关闭不生效（落回磁贴）', tag: 'fix' },
+      { t: '编辑弹窗打不开、弹窗关闭无动画', tag: 'fix' },
+      { t: '切主页瞬间点文件夹误打开', tag: 'fix' }
+    ]
+  },
+  {
     ver: 'v1.7.0',
     items: [
       { t: '页面布局：时钟 / 搜索框 / 拓展坞独立定位，全屏拖拽编辑器，位置预设自动错开', tag: 'new' },
@@ -85,7 +99,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.7.0</span>
+            <span class="am-chip">v1.7.1</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

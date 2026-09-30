@@ -17,7 +17,7 @@
 
 **简约，是把选择权交回你手里的另一种表达。**
 
-- 版本：v1.7.0
+- 版本：v1.7.1
 - 类型：Edge / Chrome 扩展（Manifest V3）
 - 作者：史宇辰
 
@@ -44,11 +44,11 @@
 > npm install
 > npm run build    # 产物在 dist/
 > ```
-> 本包 `simpletab-v1.7.0.zip`（已构建，含 `manifest.json` 于根目录）可直接解压安装，无需构建。
+> 本包 `simpletab-v1.7.1.zip`（已构建，含 `manifest.json` 于根目录）可直接解压安装，无需构建。
 
 ### 方式一：从压缩包安装（推荐）
 
-1. **解压** `simpletab-v1.7.0.zip` 到固定目录（解压后**不要移动或删除**该文件夹，否则扩展失效），确认第一层能看到 `manifest.json` 与 `index.html`。
+1. **解压** `simpletab-v1.7.1.zip` 到固定目录（解压后**不要移动或删除**该文件夹，否则扩展失效），确认第一层能看到 `manifest.json` 与 `index.html`。
 2. 打开扩展管理页：Edge 输入 `edge://extensions`，Chrome 输入 `chrome://extensions`。
 3. 打开右下角「开发者模式」。
 4. 点击「加载已解压的扩展程序」，选择解压出的文件夹。
