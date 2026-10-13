@@ -1,0 +1,151 @@
+/* ============ 主页：搜索框跟随固定时钟摆放 ============ */
+#homeSection{
+  position:relative;width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:0 6vw;
+  animation:viewRise .5s var(--ease);   /* 不用 both：结束后脱离 transform 合成层，避免层内文本条纹伪影 */
+  transition:justify-content .6s var(--ease),align-items .6s var(--ease),padding .6s var(--ease);
+}
+/* 退出到链接页的淡出由 #homeSection.hidden 的 opacity 过渡负责，home-leaving 类仅保留标记 */
+/* 时钟固定顶部(6vh起，高约20vh)：搜索框放在其下方 */
+#homeSection.pos-top{padding-top:28vh;}
+/* 时钟垂直居中(42%)：搜索框在中心下方 */
+#homeSection.pos-mid{padding-top:55vh;}
+/* 时钟固定底部(6vh起)：搜索框在时钟上方；dock 可见时时钟与搜索框同步上移让位 */
+#homeSection.pos-bottom{justify-content:flex-end;padding-bottom:calc(6vh + 21vh);}
+/* 时钟左上：搜索框同侧对齐 */
+#homeSection.pos-left{justify-content:flex-start;align-items:flex-start;padding-top:32vh;padding-left:8vw;}
+/* 时钟右上：搜索框同侧对齐 */
+#homeSection.pos-right{justify-content:flex-start;align-items:flex-end;padding-top:32vh;padding-right:8vw;}
+/* 矮窗口适配：时钟随高度收缩、收紧间距，保证搜索框/时钟/链接区在不同分辨率下不重叠 */
+@media (max-height:600px){
+  .clock-time{font-size:clamp(2.8rem,min(11vw,16vh),5rem);line-height:1;}
+  .clock-date{margin-top:.4rem;font-size:clamp(.8rem,2vh,.95rem);}
+  #homeSection.pos-top{padding-top:30vh;}
+  #homeSection.pos-bottom{padding-bottom:30vh;}
+  #homeSection.pos-bottom.dock-lift{padding-bottom:calc(5vh + 112px + 24vh);}
+}
+/* 极矮窗口（≤360px 高）：隐藏日期进一步压缩，避免任何重叠 */
+@media (max-height:360px){
+  .clock-date{display:none;}
+  .clock-time{font-size:clamp(2rem,min(10vw,13vh),2.8rem);}
+  #homeSection.pos-top{padding-top:24vh;}
+  #homeSection.pos-mid{padding-top:58vh;}
+  #homeSection.pos-bottom{padding-bottom:24vh;}
+  #homeSection.pos-bottom.dock-lift{padding-bottom:calc(4vh + 90px + 16vh);}
+  #homeSection.pos-left,#homeSection.pos-right{padding-top:26vh;}
+}
+.search-wrap{position:fixed;left:var(--search-x,50%);top:var(--search-y,40%);transform:translate(-50%,-50%);z-index:35;transition:transform .5s var(--ease);}
+.search-bar{
+  position:relative;isolation:isolate;
+  display:flex;align-items:center;gap:.6rem;
+  width:var(--search-w,400px);height:58px;
+  padding:0 .6rem 0 1.2rem;
+  border-radius:var(--search-radius,999px);
+  background:var(--search-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:0 12px 38px rgba(0,30,34,.26);
+  transition:width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+  cursor:text;
+  /* 独立合成层：避免宽度动画期间毛玻璃 ::before 每帧重采样导致边缘抖动 */
+  transform:translateZ(0);will-change:width;
+}
+/* 毛玻璃放静态伪元素：主页进入动画已改纯位移（不动 opacity），backdrop 采样进入即就绪 */
+.search-bar::before{
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，inset:0 会让背景圆比边框圆小 1px，角上露月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:-1;
+  backdrop-filter:blur(22px) saturate(170%);
+  -webkit-backdrop-filter:blur(22px) saturate(170%);
+  transition:backdrop-filter .4s var(--ease), -webkit-backdrop-filter .4s var(--ease);
+  transform:translateZ(0);
+}
+.search-bar:hover:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);background:var(--search-bg-hover);}
+.search-bar:focus-within:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);background:var(--search-bg-focus);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28),0 16px 48px rgba(0,30,34,.32);}
+/* 注：hover/focus 不再改变 backdrop-filter 强度，避免宽度过渡期间毛玻璃边缘采样抖动 */
+/* 输入过内容后保持展开，避免失焦即收缩 */
+.search-bar.has-text:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);}
+.search-bar.has-text input{opacity:1;pointer-events:auto;}
+.search-bar .s-ico{flex:none;display:grid;place-items:center;}
+.search-bar .s-ico svg{grid-area:1/1;transform-origin:center;transition:transform .4s var(--ease),opacity .22s var(--ease);}
+.search-bar .s-ico .si-b{opacity:0;transform:rotate(90deg) scale(.35);}
+.search-bar .s-ico.has-text .si-a{opacity:0;transform:rotate(-90deg) scale(.35);}
+.search-bar .s-ico.has-text .si-b{opacity:1;transform:rotate(0) scale(1);}
+.search-bar .s-ico.has-text{cursor:pointer;}
+.search-bar input{flex:1;min-width:0;height:100%;line-height:58px;padding:0;border:none;outline:none;background:transparent;font-size:1.05rem;color:var(--text);opacity:0;pointer-events:none;transition:opacity .4s var(--ease);caret-color:var(--accent);}
+.search-bar input::placeholder{color:var(--placeholder);transition:opacity .3s var(--ease);}
+.search-bar input:focus::placeholder{opacity:.45;}
+.search-bar:hover input,.search-bar:focus-within input{opacity:1;pointer-events:auto;}
+/* 搜索框 hover/有内容展开方向自适应：位置偏左向右展开、偏右向左展开、居中双向。
+   通过平移 .search-wrap 半个展开增量（220/2=110px）固定一侧边缘，不干扰搜索框自身 3D 动画 */
+.search-wrap:has(.search-bar[data-expand="r"]:hover:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="r"]:focus-within:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="r"].has-text:not(.no-expand)){transform:translate(-50%,-50%) translateX(110px);}
+.search-wrap:has(.search-bar[data-expand="l"]:hover:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="l"]:focus-within:not(.no-expand)),
+.search-wrap:has(.search-bar[data-expand="l"].has-text:not(.no-expand)){transform:translate(-50%,-50%) translateX(-110px);}
+/* ============ 搜索框 3D 动画（设置 → 搜索框动画：无 / 沉入 / 浮升） ============ */
+/* 沉入式：常态微俯视浮起，聚焦沿 Z 轴下沉 + 扶正 + accent 辉光 */
+html[data-search-anim="sink"] .search-bar{
+  transform:perspective(900px) rotateX(2deg);
+  transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+}
+html[data-search-anim="sink"] .search-bar:focus-within{
+  transform:perspective(900px) translateZ(-28px) rotateX(0deg);
+  box-shadow:0 0 0 4px rgba(var(--accent-rgb),.15), 0 8px 40px rgba(var(--accent-rgb),.35), inset 0 2px 10px rgba(0,0,0,.12);
+}
+/* 浮升式：常态平置，聚焦沿 Z 轴上浮靠近 + 投影增强 */
+html[data-search-anim="lift"] .search-bar{
+  transform:perspective(900px);
+  transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+}
+html[data-search-anim="lift"] .search-bar:focus-within{
+  transform:perspective(900px) translateZ(30px) scale(1.02);
+  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28), 0 18px 50px rgba(0,30,34,.32);
+}
+/* 新手引导期间禁用搜索框 3D 变换/动画：聚焦框用 getBoundingClientRect 测量，
+   若搜索框带 transform（rotateX / translateZ）会导致测量尺寸与视觉不符，引导挖洞错位 */
+body.tour-active .search-bar{transform:none !important;}
+.engine-pill{
+  flex:none;display:inline-flex;align-items:center;gap:.32rem;
+  padding:.34rem .68rem;border-radius:999px;font-size:.82rem;font-weight:500;
+  color:var(--accent-text);background:var(--glass-soft);border:1px solid var(--glass-border);
+  cursor:pointer;user-select:none;
+  opacity:0;pointer-events:none;
+  transition:background .25s,color .25s,transform .2s var(--ease),opacity .4s var(--ease);
+}
+.search-bar:hover .engine-pill,.search-bar:focus-within .engine-pill,.search-bar.has-text .engine-pill{opacity:1;pointer-events:auto;}
+.engine-pill:hover{background:rgba(var(--accent-rgb),.2);}
+.engine-pill:active{transform:scale(.93);}
+.engine-pill .ep-caret{display:inline-flex;opacity:.6;transition:transform .3s;}
+.engine-pill:hover .ep-caret{transform:translateY(1px);}
+.engine-pill.open .ep-caret{transform:rotate(180deg);}
+.engine-pill.flip{animation:flip .45s var(--ease);}
+@keyframes flip{0%{transform:rotateX(0);}50%{transform:rotateX(90deg);}100%{transform:rotateX(0);}}
+
+/* 引擎下拉菜单（点击胶囊展开） */
+.engine-wrap{position:relative;flex:none;display:flex;align-items:center;}
+.engine-dropdown{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:60;
+  min-width:118px;padding:.35rem;border-radius:14px;
+  background:var(--glass-strong);border:1px solid var(--glass-border);
+  backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:0 16px 44px rgba(0,0,0,.35);
+  transform-origin:top right;animation:pop .18s var(--ease) both;
+}
+.engine-dropdown.closing{animation:popOut .18s var(--ease) both;}
+@keyframes popOut{from{opacity:1;transform:scale(1) translateY(0);}to{opacity:0;transform:scale(.94) translateY(-4px);}}
+.engine-dropdown .ed-item{
+  display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  width:100%;padding:.45rem .7rem;border-radius:9px;font-size:.85rem;color:var(--text);
+  transition:background .18s,color .18s;
+}
+.engine-dropdown .ed-item:hover{background:rgba(var(--accent-rgb),.16);color:var(--accent-text);}
+.engine-dropdown .ed-item .ed-check{color:var(--accent-text);font-weight:700;visibility:hidden;}
+.engine-dropdown .ed-item.on{color:var(--accent-text);}
+.engine-dropdown .ed-item.on .ed-check{visibility:visible;}
+/* 引擎名称气泡自适应宽度：胶囊随名称撑宽（受搜索框约束，超长省略）；
+   下拉项名称超长换行不截断，下拉整体自适应宽度 */
+.engine-pill{max-width:min(200px,36vw);white-space:nowrap;}
+.engine-pill > span:first-child{overflow:hidden;text-overflow:ellipsis;}
+.engine-dropdown{max-width:min(280px,78vw);}
+.engine-dropdown .ed-item .ed-name{white-space:normal;word-break:break-word;text-align:left;line-height:1.35;}

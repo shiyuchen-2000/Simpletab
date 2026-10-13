@@ -1,0 +1,30 @@
+/* 跨领域覆盖（依赖全量样式已加载，需保持在样式序列末段） */
+
+/* 自适应(auto)图标：字母兜底背景亮色=白、暗色=黑，让透明 favicon 更协调；text 模式保留品牌渐变 */
+[data-theme="light"] .tile .t-ico[data-ic="auto"], [data-theme="light"] .dock-item[data-ic="auto"]{background:#fff;color:#1a2b30;box-shadow:0 6px 16px rgba(13,43,46,.12);}
+[data-theme="dark"] .tile .t-ico[data-ic="auto"], [data-theme="dark"] .dock-item[data-ic="auto"]{background:#0b0f14;color:#eef4ff;box-shadow:0 6px 16px rgba(0,0,0,.35);}
+
+/* 拖拽换位动画（TransitionGroup move）：磁贴位置变化平滑过渡 */
+.tile-move{transition:transform .32s var(--ease) !important;}
+
+/* 搜索栏：交换搜索引擎与搜索图标位置（引擎在左、图标在右，图标内收） */
+/* 图标脱离 flex 流、绝对定位于右缘：宽度展开动画不重排图标 */
+[data-search-swap="1"] .search-bar{padding:0 3rem 0 .8rem;}
+[data-search-swap="1"] .search-bar .engine-wrap{order:0;}
+[data-search-swap="1"] .search-bar input{order:1;}
+[data-search-swap="1"] .search-bar .s-ico{position:absolute;right:1.1rem;top:50%;transform:translateY(-50%);}
+/* 时钟右上（搜索框靠右）：hover 展开保留平滑动画，但动画期间毛玻璃降级为实色背景，避免采样抖动 */
+body.clock-pos-right .search-bar{transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;}
+body.clock-pos-right .search-bar::before{transition:none;}
+body.clock-pos-right .search-bar:hover::before,
+body.clock-pos-right .search-bar:focus-within::before{backdrop-filter:none;-webkit-backdrop-filter:none;}
+body.clock-pos-right .search-bar:hover,
+body.clock-pos-right .search-bar:focus-within{background:rgba(15,22,32,.9);}
+[data-theme="light"] body.clock-pos-right .search-bar:hover,
+[data-theme="light"] body.clock-pos-right .search-bar:focus-within{background:rgba(255,255,255,.96);}
+
+/* 窄屏：搜索框回退 vw 宽度，防止固定像素溢出 */
+@media (max-width:700px){
+  .search-bar{width:min(var(--search-w,400px),78vw);}
+  .search-bar:hover:not(.no-expand),.search-bar:focus-within:not(.no-expand),.search-bar.has-text:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);}
+}

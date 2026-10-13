@@ -1,0 +1,25 @@
+/* ============ 背景层（默认清新壁纸） ============ */
+.bg{
+  position:fixed;inset:0;z-index:0;
+  background:var(--bg-default);
+  background-size:cover;background-position:center;
+  /* 自定义壁纸（尤其透明 PNG / 未加载完成）时兜底，避免透出 body 的默认壁纸渐变 */
+  background-color:#101826;
+  background-repeat:no-repeat;
+  transform-origin:center;
+  transition:filter .7s var(--ease), transform .7s var(--ease);
+}
+body.links-open .bg{
+  filter:blur(11px) saturate(130%) brightness(.85);
+  transform:scale(1.06);
+}
+/* 视频壁纸：填满背景层，位于 dim/vignette/tint 叠加层之下；
+   links-open 的 blur/scale 继承父级自动生效，期间视频由 JS 暂停为静态帧 */
+.bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.bg-dim{position:absolute;inset:0;background:rgba(8,20,26,0);transition:background .4s;}
+[data-theme="dark"] .bg-dim{background:rgba(8,20,26,.24);}
+/* 壁纸暗角（黑色晕影压暗边缘） */
+.bg-vignette{position:absolute;inset:0;background:radial-gradient(115% 90% at 50% 45%, transparent 40%, rgba(0,0,0,.68) 100%);opacity:0;transition:opacity .5s;}
+body.vignette-on .bg-vignette{opacity:1;}
+.bg-tint{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 18%, transparent 40%, rgba(0,0,0,.22) 100%);opacity:0;transition:opacity .7s;}
+body.links-open .bg-tint{opacity:1;}

@@ -1,0 +1,165 @@
+/* ============ 快捷链接页 ============ */
+#linksSection{width:100%;max-width:1180px;margin:0 auto;padding:0 4vw;display:flex;flex-direction:column;align-items:center;}
+@keyframes zoomIn{from{opacity:0;transform:scale(.94);}to{opacity:1;transform:scale(1);}}
+/* 视图进入动画：链接页上浮淡入 */
+@keyframes viewUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+/* 主页仅位移上浮、不动 opacity：backdrop-filter 元素在祖先 opacity 动画期间会被降采样/延迟，
+   若主页做 opacity 淡入，搜索框会先显示"透明栏"再加载毛玻璃材质，故主页进入只做位移 */
+@keyframes viewRise{from{transform:translateY(18px);}to{transform:translateY(0);}}
+/* 视图隐藏：不销毁渲染树（合成层保留），入场动画由 JS 加 .view-enter 重触发。
+   home 淡出走 opacity 过渡（visibility 延迟到淡出结束），避免退出链接页时主页"啪"地消失 */
+#linksSection.hidden{visibility:hidden;opacity:0;pointer-events:none;}
+#homeSection.hidden{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .12s ease, visibility 0s linear .12s;
+}
+#linksSection.view-enter{animation:viewUp .4s var(--ease) .15s backwards;}
+#homeSection.view-enter{animation:viewRise .5s var(--ease);}
+/* ============ 磁贴入场动画（设置 → 磁贴入场动画：整体淡入 / 依次落位） ============ */
+/* 落位模式：链接页整体不上浮，磁贴按顺序从上方下落轻弹（一次性入场） */
+html[data-tile-enter="drop"] #linksSection.view-enter{animation:none;}
+/* 用 backwards 而非 both：.view-enter 类常驻，both 会持续保持动画末帧的 transform，
+   覆盖磁贴 hover 上浮导致悬浮动效失效；backwards 动画结束后 transform 恢复正常 */
+html[data-tile-enter="drop"] #linksSection.view-enter .link-area .tile{animation:tileDrop .5s var(--ease) backwards;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(1){animation-delay:0s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(2){animation-delay:.06s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(3){animation-delay:.12s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(4){animation-delay:.18s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(5){animation-delay:.24s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(6){animation-delay:.30s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(7){animation-delay:.36s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(8){animation-delay:.42s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(9){animation-delay:.48s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(10){animation-delay:.54s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(11){animation-delay:.60s;}
+html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(12){animation-delay:.66s;}
+@keyframes tileDrop{
+  from{opacity:0;transform:translateY(-18px) scale(.94);}
+  60%{opacity:1;transform:translateY(4px) scale(1.01);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+/* 磁贴收起（离开链接页，落位模式）：依次向上浮起淡出，镜像落位，避免关闭生硬 */
+body.links-leaving #linksSection .link-area .tile{animation:tileRise .26s var(--ease) both;}
+/* nth-child 须带 #linksSection：否则特异性 (0,3,1) 低于主动画 (1,3,1)，delay 被 animation 简写覆盖 */
+body.links-leaving #linksSection .tile:nth-child(1){animation-delay:0s;}
+body.links-leaving #linksSection .tile:nth-child(2){animation-delay:.03s;}
+body.links-leaving #linksSection .tile:nth-child(3){animation-delay:.06s;}
+body.links-leaving #linksSection .tile:nth-child(4){animation-delay:.09s;}
+body.links-leaving #linksSection .tile:nth-child(5){animation-delay:.12s;}
+body.links-leaving #linksSection .tile:nth-child(6){animation-delay:.15s;}
+body.links-leaving #linksSection .tile:nth-child(7){animation-delay:.18s;}
+body.links-leaving #linksSection .tile:nth-child(8){animation-delay:.21s;}
+body.links-leaving #linksSection .tile:nth-child(9){animation-delay:.24s;}
+body.links-leaving #linksSection .tile:nth-child(10){animation-delay:.27s;}
+body.links-leaving #linksSection .tile:nth-child(11){animation-delay:.30s;}
+body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.33s;}
+@keyframes tileRise{
+  from{opacity:1;transform:translateY(0) scale(1);}
+  60%{opacity:1;transform:translateY(5px) scale(1.01);}
+  to{opacity:0;transform:translateY(-20px) scale(.94);}
+}
+.link-area{
+  /* fit-content：宽度收缩到磁贴实际宽度并整体居中（不偏左）；磁贴多到超宽时铺满父容器换行左对齐 */
+  width:fit-content;max-width:100%;margin:30vh auto 0;
+  display:flex;flex-wrap:wrap;gap:var(--tile-gap,26px);justify-content:flex-start;align-items:flex-start;
+  max-height:calc(100vh - 34vh);overflow-y:auto;
+  /* 顶部预留悬浮上浮空间：overflow 滚动容器会裁切第一行磁贴 hover 上浮超出部分，
+     padding-top 随悬浮强度（--tile-hover-lift 为负值）动态增大，保证上浮不被裁边 */
+  padding:calc(6px + var(--tile-hover-lift,-5px) * -1) 2px 40px;
+  transition:margin-top .5s var(--ease),max-height .5s var(--ease);
+  scrollbar-width:thin;scrollbar-color:var(--glass-border) transparent;
+}
+body.clock-pos-mid .link-area{margin-top:57vh;max-height:calc(100vh - 60vh);}
+body.clock-pos-bottom .link-area{margin-top:8vh;max-height:calc(100vh - 18vh);}
+body.clock-pos-left .link-area,body.clock-pos-right .link-area{margin-top:34vh;}
+.link-area::-webkit-scrollbar{width:8px;}
+.link-area::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:8px;}
+
+.tile{
+  position:relative;
+  width:var(--tile-w,106px);padding:16px 12px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:var(--tile-gap-in,12px);
+  border-radius:calc(19px * var(--radius-scale,1));cursor:pointer;user-select:none;
+  /* 无描边、无投影：`--shadow` 投影会在磁贴周围扩散成黑灰色轮廓（观感像边框），一并去掉；
+     drag-in / 添加磁贴 hover 的 accent 功能边框保留 */
+  background:var(--glass);border:1px solid transparent;
+  box-shadow:none;
+  isolation:isolate;
+  /* 独立合成层：避免某个磁贴 transform 动画时 Chromium 连带重绘其他毛玻璃磁贴导致闪动 */
+  transform:translateZ(0);
+  transition:transform .28s var(--ease), background .28s, border-color .28s;
+}
+/* 毛玻璃放静态伪元素，不随 transform 动画，避免 Chromium backdrop-filter 采样残留导致相邻磁贴花屏 */
+.tile::before{
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，避免背景与边框间出现月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:-1;
+  backdrop-filter:blur(10px) saturate(150%);
+  -webkit-backdrop-filter:blur(10px) saturate(150%);
+  /* 独立成合成层：隔离弹窗/交互触发的父层重排，规避 backdrop 采样出现的横/竖条纹伪影 */
+  transform:translateZ(0);
+  /* 毛玻璃短渐显兜底：合成层常驻后采样基本在首次加载完成，此处仅掩盖极少数延迟采样 */
+  animation:bgin .25s ease both;
+}
+@keyframes bgin{from{opacity:0;}to{opacity:1;}}
+.tile:hover{transform:translateY(var(--tile-hover-lift,-5px)) translateZ(0);background:var(--glass-strong);}
+.tile:active{transform:translateY(-2px) scale(.98) translateZ(0);}
+.tile.dragging{opacity:.35;}
+/* 悬浮动效关闭：设置悬浮强度为 0 时禁用 hover/active 位移 */
+body.no-tile-hover .tile:hover,body.no-tile-hover .tile:active{transform:none;}
+.tile .t-ico{width:var(--tile-ico,46px);height:var(--tile-ico,46px);border-radius:var(--ico-radius,calc(13px * var(--radius-scale,1)));overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-ico,46px) * .46);font-weight:600;color:var(--accent-icon-text);background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));box-shadow:0 6px 16px rgba(var(--accent-rgb),var(--tile-glow,.3));position:relative;}
+/* img 轻微放大：favicon 从 16px 非整数倍放大到 cover 时边缘会有 1px 采样色带，放大后由 overflow:hidden 裁掉 */
+.tile .t-ico img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.04);z-index:2;}
+/* 图标淡入：本地缓存命中或"字母→图标"切换时更平滑（prefers-reduced-motion 下全局关闭动画） */
+@keyframes faviconIn{from{opacity:0;}to{opacity:1;}}
+.tile .t-ico img,.dock-item img{animation:faviconIn .16s ease;}
+.tile .t-name{font-size:13px;color:var(--text);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 磁贴名称显示模式：始终 / 悬浮 / 不显示（快捷链接区 + 文件夹内磁贴同步生效） */
+/* 悬浮 / 不显示：标题不占布局空间，图标垂直居中；悬浮时图标上移、标题在下方淡入 */
+body.tile-text-hover .link-area .tile,body.tile-text-hover .fp-grid .tile{justify-content:center;}
+body.tile-text-hover .link-area .tile:not(.add),body.tile-text-hover .fp-grid .tile:not(.add){min-height:var(--tile-h,106px);}
+body.tile-text-hover .link-area .tile .t-ico,body.tile-text-hover .link-area .tile .f-grid,body.tile-text-hover .fp-grid .tile .t-ico{transition:transform .28s var(--ease);}
+body.tile-text-hover .link-area .tile .t-name,body.tile-text-hover .fp-grid .tile .t-name{
+  position:absolute;left:8px;right:8px;bottom:10px;text-align:center;
+  opacity:0;transform:translateY(4px);
+  transition:opacity .22s var(--ease),transform .22s var(--ease);
+}
+body.tile-text-hover .link-area .tile:hover .t-name,body.tile-text-hover .fp-grid .tile:hover .t-name{opacity:1;transform:translateY(0);}
+body.tile-text-hover .link-area .tile:hover .t-ico,body.tile-text-hover .link-area .tile:hover .f-grid,body.tile-text-hover .fp-grid .tile:hover .t-ico{transform:translateY(-9px);}
+body.tile-text-none .link-area .tile .t-name,body.tile-text-none .fp-grid .tile .t-name{display:none;}
+body.tile-text-none .link-area .tile:not(.add),body.tile-text-none .fp-grid .tile:not(.add){justify-content:center;min-height:var(--tile-h,106px);}
+.tile.add{background:rgba(255,255,255,.14);justify-content:center;box-shadow:none;min-height:var(--tile-h,106px);position:relative;}
+/* 加号磁贴关闭毛玻璃采样：半透明底无模糊必要，且规避 Chromium backdrop-filter 在部分 GPU 下的竖直条纹伪影 */
+.tile.add::before{backdrop-filter:none;-webkit-backdrop-filter:none;}
+[data-theme="dark"] .tile.add{background:rgba(0,0,0,.14);}
+.tile.add:hover{border-color:var(--accent);transform:translateY(var(--tile-hover-lift,-5px));background:rgba(var(--accent-rgb),.22);}
+/* 「+」磁贴：幽灵态十字 —— 亮色模式白色半透明 / 暗色模式灰黑半透明，hover 后变主题色 */
+.tile.add .plus{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);}
+[data-theme="dark"] .tile.add .plus{color:rgba(0,0,0,.4);}
+.tile.add .plus svg{width:28px;height:28px;transition:transform .28s var(--ease);}
+.tile.add:hover .plus{color:var(--accent);}
+.tile.add:hover .plus svg{transform:scale(1.1);}
+
+/* 手机式文件夹磁贴：网格大小跟随图标尺寸，与链接磁贴保持视觉一致 */
+.folder-tile .f-grid{
+  width:var(--tile-ico,46px);height:var(--tile-ico,46px);border-radius:calc(12px * var(--radius-scale,1));flex:none;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;
+}
+.folder-tile .f-grid .mini{
+  border-radius:var(--ico-radius,calc(11px * var(--radius-scale,1)));background-size:cover;background-position:center;
+  display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-ico,46px) * .26);font-weight:600;color:var(--accent-icon-text);
+  background-color:rgba(var(--accent-rgb),.85);
+  overflow:hidden;
+}
+/* 空文件夹「+」mini：幽灵态 —— 亮色白半透明 / 暗色灰黑半透明，hover 磁贴时变主题色 */
+.folder-tile .f-grid .mini-add{color:rgba(255,255,255,.6);background-color:rgba(255,255,255,.16);transition:color .28s var(--ease),background-color .28s var(--ease);}
+[data-theme="dark"] .folder-tile .f-grid .mini-add{color:rgba(0,0,0,.42);background-color:rgba(0,0,0,.16);}
+.folder-tile:hover .f-grid .mini-add{color:var(--accent);background-color:rgba(var(--accent-rgb),.25);}
+.folder-tile.drag-in{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.35);}
+
+/* 玻璃高光：面板顶部 1px 反光边（box-shadow 内描边，不新增合成层） */
+body.glass-shine .tile:not(.add){box-shadow:inset 0 1px 0 var(--glass-topline);}
+body.glass-shine .folder-tile.drag-in{box-shadow:0 0 0 3px rgba(var(--accent-rgb),.35), inset 0 1px 0 var(--glass-topline);}
+body.glass-shine .dock{box-shadow:0 14px 40px rgba(0,0,0,.3), inset 0 1px 0 var(--glass-topline);}
+body.glass-shine .search-bar{box-shadow:0 12px 38px rgba(0,30,34,.26), inset 0 1px 0 var(--glass-topline);}
+body.glass-shine .search-bar:focus-within{box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28),0 16px 48px rgba(0,30,34,.32), inset 0 1px 0 var(--glass-topline);}
+body.glass-shine .modal{box-shadow:0 24px 70px rgba(0,0,0,.4), inset 0 1px 0 var(--glass-topline);}

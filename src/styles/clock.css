@@ -1,0 +1,36 @@
+/* ============ 时钟（两页统一固定定位，位置预设一致） ============ */
+#clockWrap{
+  position:fixed;z-index:2;text-align:center;pointer-events:none;
+  left:var(--clock-x,50%);top:var(--clock-y,15%);transform:translate(-50%,-50%);
+  scale:var(--clock-scale,1);
+  transition:left .5s var(--ease),top .5s var(--ease),transform .5s var(--ease);
+  animation:fadeOnly .5s ease both;
+}
+/* 链接页（磁贴页）不显示时钟：避免与磁贴叠加；时钟仅在主页显示 */
+body.links-open #clockWrap{display:none;}
+/* 搜索页点击时间区域 → 进入链接页（仅主页放开点击） */
+body:not(.links-open) #clockWrap{pointer-events:auto;cursor:pointer;}
+.clock-time{
+  font-size:clamp(3.5rem,min(13vw,16vh),8.5rem);
+  font-weight:300;
+  line-height:.95;
+  letter-spacing:-.02em;
+  text-shadow:var(--clock-shadow);
+  font-variant-numeric:tabular-nums;
+  display:flex;align-items:baseline;justify-content:center;gap:.06em;
+  color:var(--clock-text);
+  /* 渐变文字：上亮下暗金属质感；不支持 background-clip 时回退实色 */
+  background:var(--clock-grad, none);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+/* 支持裁剪时文字透明露出渐变；用户自定义时钟颜色时内联 color 覆盖本规则，仍显示自定义纯色 */
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .clock-time{color:transparent;}
+}
+.clock-time .colon{font-weight:200;animation:none;}
+.clock-time.blink .colon{animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0;}}
+@keyframes fadeOnly{from{opacity:0;}to{opacity:1;}}
+.clock-date{margin-top:.8rem;font-size:clamp(.95rem,2.2vw,1.25rem);color:var(--clock-date,var(--text-dim));letter-spacing:.18em;}
+.clock-ampm{font-size:.32em;font-weight:400;letter-spacing:.08em;color:var(--accent-text);}

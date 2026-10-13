@@ -1,0 +1,35 @@
+/* ============ 新手指引（聚光遮罩 + 说明气泡；遮罩不拦截点击，用户可直接操作聚焦目标） ============ */
+.tour-mask{position:fixed;inset:0;z-index:96;pointer-events:none;}
+/* 挖洞：主题色描边 + 光晕让暗色下聚焦清晰；描边/光晕必须声明在 2000px 遮罩阴影之前（多层阴影先声明者在上层） */
+.tour-hole{position:fixed;border-radius:16px;pointer-events:none;
+  box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(var(--accent-rgb),.55),0 0 0 2000px rgba(0,12,16,.55);
+  transition:top .35s var(--ease),left .35s var(--ease),width .35s var(--ease),height .35s var(--ease),opacity .25s;}
+.tour-hole.dim{opacity:0;}
+.tour-bubble{position:fixed;padding:1rem 1.1rem;border-radius:16px;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);box-shadow:0 18px 50px rgba(0,0,0,.4);pointer-events:auto;transition:top .35s var(--ease),left .35s var(--ease),opacity .25s;}
+.tour-bubble.dim{opacity:0;pointer-events:none;}
+/* 引导说明中的重点词：主题色高亮 */
+.tb-hl{color:var(--accent);font-weight:600;}
+/* 表单/菜单打开（气泡让路）时的页内操作提示 */
+.tour-hint{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);z-index:97;
+  padding:.5rem 1.15rem;border-radius:999px;pointer-events:none;white-space:nowrap;
+  background:rgba(var(--accent-rgb),.94);color:var(--accent-on);
+  font-size:.84rem;font-weight:500;letter-spacing:.02em;box-shadow:0 10px 30px rgba(0,0,0,.35);
+  opacity:0;transition:opacity .25s ease;}
+.tour-hint.show{opacity:1;}
+.tfade-enter-active,.tfade-leave-active{transition:opacity .25s ease;}
+.tfade-enter-from,.tfade-leave-to{opacity:0;}
+.tb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;}
+.tb-step{font-size:.75rem;color:var(--text-dim);}
+.tb-skip{font-size:.78rem;color:var(--text-dim);padding:.2rem .55rem;border-radius:8px;transition:background .2s,color .2s;}
+.tb-skip:hover{background:var(--glass-soft);color:var(--text);}
+.tb-title{font-size:1.02rem;font-weight:600;margin-bottom:.35rem;}
+.tb-desc{font-size:.87rem;color:var(--text-dim);line-height:1.65;margin-bottom:.9rem;}
+.tb-actions{display:flex;justify-content:flex-end;}
+.btn{padding:.55rem 1.15rem;border-radius:11px;font-size:.9rem;display:inline-flex;align-items:center;gap:.5rem;transition:transform .2s,box-shadow .2s,background .2s,color .2s;}
+.btn:hover{transform:translateY(-1px);}
+.btn-primary{background:var(--accent);color:var(--accent-on);font-weight:600;box-shadow:0 8px 20px rgba(var(--accent-rgb),.35);}
+.btn-primary:hover{box-shadow:0 10px 26px rgba(var(--accent-rgb),.5);}
+.btn-ghost{background:var(--glass-soft);border:1px solid var(--glass-border);color:var(--text);}
+.btn-ghost:hover{background:var(--glass-strong);}
+.btn-danger{background:rgba(231,76,86,.18);border:1px solid rgba(231,76,86,.4);color:#ff7a84;}
+.btn-danger:hover{background:rgba(231,76,86,.3);}

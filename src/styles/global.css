@@ -1,0 +1,12 @@
+/* 全局兜底 / 通用规则（保持在整个组件序列之后，确保降级不被组件规则覆盖） */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .search-bar,.engine-pill,.tile,.folder-tile,.dropdown,.modal,.overlay-form,.context-menu,.toast,.folder-panel,#gearBtn{background:var(--glass-strong);}
+}
+/* 沉浸式滚动条：透明轨道 + 细圆角滑块 */
+*::-webkit-scrollbar{width:8px;height:8px;background:transparent;}
+*::-webkit-scrollbar-track{background:transparent;}
+*::-webkit-scrollbar-thumb{background:rgba(var(--accent-rgb),.28);border-radius:8px;border:2px solid transparent;background-clip:content-box;}
+*::-webkit-scrollbar-thumb:hover{background:rgba(var(--accent-rgb),.5);background-clip:content-box;}
+*{scrollbar-width:thin;scrollbar-color:rgba(var(--accent-rgb),.4) transparent;}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+@media (max-width:640px){.tile{width:88px;}.tile .t-ico{width:40px;height:40px;}.seg button{padding:.38rem .6rem;font-size:.8rem;}.dock{gap:10px;padding:9px 12px;border-radius:18px;}.dock-item{width:40px;height:40px;font-size:18px;}}

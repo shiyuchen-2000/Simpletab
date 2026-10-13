@@ -1,0 +1,12 @@
+/* ============ 实时预览模式 ============ */
+/* 预览模式隐藏齿轮：不可再打开设置下拉（由返回按钮退出预览） */
+body.preview #gearZone{display:none;}
+.preview-back{
+  position:fixed;top:20px;right:24px;z-index:1500;
+  display:inline-flex;align-items:center;gap:9px;
+  padding:.85rem 1.2rem;border-radius:14px;font-size:.95rem;font-weight:600;
+  color:var(--accent-on);background:var(--accent);border:none;cursor:pointer;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);
+  transition:transform .2s var(--ease),box-shadow .2s,filter .2s;
+}
+.preview-back:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(0,0,0,.35);filter:brightness(1.06);}

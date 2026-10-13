@@ -1,0 +1,62 @@
+/* ============ 顶部齿轮（仅快捷链接页） ============ */
+#gearZone{position:fixed;top:24px;right:26px;z-index:40;display:none;}
+body.links-open #gearZone{display:block;animation:zoomIn .45s var(--ease) both;}
+#gearBtn{
+  width:46px;height:46px;border-radius:50%;
+  display:grid;place-items:center;
+  position:relative;isolation:isolate;
+  border:1px solid var(--glass-border);
+  box-shadow:var(--shadow);color:var(--text);
+  transition:background .3s,color .3s;
+  cursor:grab;
+}
+#gearBtn::before{ /* 毛玻璃独立于动画层，避免旋转时重建合成层导致抖动 */
+  /* inset:-1px 扩展到 border box：宿主有 1px 边框，避免背景与边框间出现月牙缝隙 */
+  content:"";position:absolute;inset:-1px;border-radius:50%;z-index:-1;
+  background:var(--glass);
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  transition:background .3s;
+}
+#gearBtn:hover{color:var(--accent-text);}
+#gearBtn:hover::before{background:var(--glass-strong);}
+#gearBtn:active{cursor:grabbing;}
+#gearBtn .gear-svg{
+  grid-area:1/1;
+  transform-origin:center;
+  transition:transform .4s var(--ease),opacity .22s var(--ease);
+  backface-visibility:hidden;
+}
+#gearBtn .gs-b{opacity:0;transform:rotate(90deg) scale(.35);}
+#gearBtn.dropdown-open .gs-a{opacity:0;transform:rotate(-90deg) scale(.35);}
+#gearBtn.dropdown-open .gs-b{opacity:1;transform:rotate(0) scale(1);}
+#gearBtn.dragover{outline:2px dashed var(--accent);outline-offset:3px;}
+
+/* ============ 图标切换动效（morph 变形） ============ */
+/* 引擎下拉箭头：展开时翻转朝上 */
+.ep-caret svg{transition:transform .3s var(--ease);}
+.ep-caret.open svg{transform:rotate(180deg);}
+
+/* 设置下拉项图标：hover 双图标切换 morph */
+.dropdown .d-item .di{display:grid;place-items:center;flex:none;}
+.dropdown .d-item .di svg{grid-area:1/1;transform-origin:center;transition:transform .35s var(--ease),opacity .2s var(--ease);}
+.dropdown .d-item .di .di-b{opacity:0;transform:rotate(90deg) scale(.4);}
+.dropdown .d-item:hover .di .di-a{opacity:0;transform:rotate(-90deg) scale(.4);}
+.dropdown .d-item:hover .di .di-b{opacity:1;transform:rotate(0) scale(1);}
+
+/* ============ 设置下拉 ============ */
+.dropdown{
+  position:fixed;top:78px;right:26px;z-index:var(--z-dropdown);
+  min-width:200px;padding:.4rem;border-radius:16px;
+  background:var(--glass-strong);border:1px solid var(--glass-border);
+  backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:0 18px 50px rgba(0,0,0,.35);
+  transform-origin:top right;animation:pop .22s var(--ease) both;
+  display:none;
+}
+.dropdown.show{display:block;}
+.dropdown.closing{display:block;animation:popOut .18s var(--ease) both;}
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(-6px);}to{opacity:1;transform:none;}}
+.dropdown .d-item{display:flex;align-items:center;gap:.7rem;width:100%;padding:.6rem .7rem;border-radius:10px;font-size:.9rem;color:var(--text);transition:background .2s,color .2s;}
+.dropdown .d-item:hover{background:rgba(var(--accent-rgb),.16);color:var(--accent-text);}
+.dropdown .d-item svg{flex:none;}
+.dropdown .d-sep{height:1px;background:var(--glass-border);margin:.3rem .4rem;}

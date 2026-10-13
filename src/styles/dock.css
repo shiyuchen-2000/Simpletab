@@ -1,0 +1,47 @@
+/* ============ 捷径拓展坞（底部，仅图标） ============ */
+.dock{
+  position:fixed;left:var(--dock-x,50%);top:var(--dock-y,92%);transform:translate(-50%,-50%);z-index:30;
+  display:flex;gap:14px;align-items:center;
+  /* 窄窗口兜底：超宽时允许横向滚动，避免图标被裁 */
+  max-width:calc(100vw - 24px);overflow-x:auto;
+  padding:11px 16px;border-radius:calc(22px * var(--radius-scale,1));
+  background:var(--dock-bg);border:1px solid var(--glass-border);
+  backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:0 14px 40px rgba(0,0,0,.3);
+  will-change:transform;
+  transition:transform .28s var(--ease);
+  /* 用淡入动画：避免 transform 动画覆盖 translateX(-50%) 导致不居中 */
+  animation:fadeOnly .5s ease both;
+}
+/* 鼠标进入拓展坞：容器浮起按设置总幅度（--dock-hover-lift）的 40% 分摊，
+   剩余 60% 由图标相对容器浮起（见 DockBar --dock-lift），两者叠加即总幅度且不裁切。
+   设置 0 时容器不浮起、图标不浮起不放大（缩放由图标等比逻辑负责） */
+.dock:hover{transform:translate(-50%,-50%) translateY(calc(var(--dock-hover-lift,6px) * -0.4));}
+/* 无界：拓展坞无背景卡片，容器整体浮起会变成图标凭空位移，故禁用容器变形，仅保留图标联动 */
+[data-style="borderless"] .dock:hover{transform:translate(-50%,-50%);}
+/* 仅在主页(搜索页)显示，且至少 1 个图标 */
+.dock{display:none;}
+body.links-open .dock{display:none;}
+body:not(.links-open) .dock.dock-visible{display:flex;}
+.dock-item{
+  position:relative;width:var(--tile-ico,46px);height:var(--tile-ico,46px);border-radius:var(--ico-radius,calc(14px * var(--radius-scale,1)));overflow:hidden;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-ico,46px) * .44);font-weight:600;color:var(--accent-icon-text);
+  background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));
+  box-shadow:0 6px 14px rgba(var(--accent-rgb),var(--tile-glow,.3));
+  transform:translateY(var(--dock-lift,0)) scale(var(--dock-scale,1));
+  transition:transform .28s var(--ease),filter .28s;
+}
+/* 浮起 / 放大由 JS 按距离写入 --dock-lift / --dock-scale（支持邻居联动），hover 仅保留亮度 */
+.dock-item:hover{filter:brightness(1.08);will-change:transform;}
+.dock-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.04);}
+.dock-item span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
+/* 拓展坞悬停名称：挂 body 层（避开拓展坞 overflow 裁切），定位在图标上方居中 */
+.dock-tip{
+  position:fixed;z-index:var(--z-toast);transform:translate(-50%,calc(-100% - 7px));
+  padding:.28rem .62rem;font-size:.74rem;line-height:1.4;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;
+  color:var(--text);text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 8px rgba(0,0,0,.4);
+  pointer-events:none;
+}
+/* 入场：从图标位置（下方）向上缓慢浮现，与图标浮起方向一致（无背景，仅文字 + 阴影保证可读） */
+.dockTip-enter-active,.dockTip-leave-active{transition:opacity .62s var(--ease),transform .62s var(--ease);}
+.dockTip-enter-from,.dockTip-leave-to{opacity:0;transform:translate(-50%,calc(-100% + 8px));}

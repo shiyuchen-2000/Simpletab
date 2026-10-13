@@ -64,6 +64,18 @@ async function waitViewAnim() {
     new Promise(r => setTimeout(r, 900))
   ])
 }
+/* 等待磁贴落位动画（tileDrop）播完：section 入场动画结束 ≠ 磁贴动画结束，
+   落位中间态测量会让挖洞偏移（如第 5 步聚焦「+」磁贴时框在磁贴上方）。已播完则直接返回 */
+async function waitTileDropAnim() {
+  const tiles = document.querySelectorAll('#linksSection .tile')
+  const anims = []
+  tiles.forEach(t => anims.push(...t.getAnimations()))
+  if (!anims.length) return
+  await Promise.race([
+    Promise.all(anims.map(a => a.finished.catch(() => {}))),
+    new Promise(r => setTimeout(r, 1400))
+  ])
+}
 
 /* 解析当前步骤的目标元素：target 可为字符串选择器或返回选择器的函数（动态目标） */
 function resolveTargetEl() {
@@ -88,7 +100,8 @@ async function measure() {
   if (s.onEnter) s.onEnter()
   if (state.view !== s.view) setView(s.view)
   await nextTick()          // 等视图切换渲染、入场动画注册
-  await waitViewAnim()      // 等动画播完，位置才稳定
+  await waitViewAnim()      // 等视图入场动画播完，位置才稳定
+  await waitTileDropAnim()  // 再等磁贴落位动画播完，避免落位中间态测量导致挖洞偏移
   await new Promise(r => setTimeout(r, 60))
   reposition()
   await nextTick()
@@ -104,19 +117,15 @@ async function measure() {
 /* 动态目标（函数式 target）：目标元素随状态切换时重新定位并换绑观察器。
    若目标为表单弹窗，先等其 zoomIn 弹出动画播完再测量，避免 scale 中间态导致挖洞偏移盖住弹窗 */
 function refreshDynamic() {
-  console.log('[TD] refreshDynamic enter, visible=', ui.linkForm.visible, 'ro=', !!ro)
   if (typeof step.value.target !== 'function') return
   if (ro) { ro.disconnect(); ro = null }
   const form = document.querySelector('.overlay-form')
   const anims = form ? form.getAnimations() : []
-  console.log('[TD] anims=', anims.length, 'formDisplay=', form ? getComputedStyle(form).display : 'none')
   const done = anims.length ? Promise.all(anims.map(a => a.finished.catch(() => {}))) : Promise.resolve()
   done.then(() => {
-    console.log('[TD] done.then enter, tourActive=', ui.tourActive, 'visible=', ui.linkForm.visible)
     if (!ui.tourActive) return
     reposition()
     const el = resolveTargetEl()
-    console.log('[TD] repositioned, el=', el ? el.className : null, 'rect=', JSON.stringify(rect.value))
     if (el && 'ResizeObserver' in window) {
       ro = new ResizeObserver(() => reposition())
       ro.observe(el)
@@ -125,12 +134,11 @@ function refreshDynamic() {
 }
 
 watch(() => ui.tourActive, v => {
-  console.log('[TD] tourActive ->', v)
   if (!v) return
   stepIdx.value = 0
   measure()
 })
-watch(stepIdx, v => { console.log('[TD] stepIdx ->', v); measure() })
+watch(stepIdx, () => measure())
 /* 同步「当前步骤是否允许右键空白进入链接页」到 ui：App.vue 的右键处理据此放行 / 屏蔽 */
 watchEffect(() => {
   ui.tourRightClickEnter = ui.tourActive && !!(step.value && step.value.rightClickEnterLinks)
@@ -157,18 +165,14 @@ watch(() => [ui.ctxMenu.visible, ui.ctxMenu.x, ui.ctxMenu.y], async ([v]) => {
 watchEffect(() => {
   if (!ui.tourActive) return
   const s = step.value
-  const fd = document.querySelector('.overlay-form') ? getComputedStyle(document.querySelector('.overlay-form')).display : 'n/a'
-  console.log('[TD] watchEffect run, idx=', stepIdx.value, 'title=', s.title, 'visible=', ui.linkForm.visible, 'formDisplay=', fd)
-  if (s.expect && s.expect()) { console.log('[TD] expect -> nextStep'); nextStep(); return }
+  if (s.expect && s.expect()) { nextStep(); return }
   if (typeof s.target === 'function') {
     s.target()   // 建立响应依赖：表单开/合等状态变化时本 effect 重跑
-    console.log('[TD] schedule refreshDynamic')
-    nextTick(() => { console.log('[TD] nextTick cb, step match=', step.value === s); if (ui.tourActive && step.value === s) refreshDynamic() })
+    nextTick(() => { if (ui.tourActive && step.value === s) refreshDynamic() })
   }
 })
 
 function nextStep() {
-  console.log('[TD] nextStep', stepIdx.value)
   if (isLast.value) { ui.tourActive = false; return }
   stepIdx.value++
 }

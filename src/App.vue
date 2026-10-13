@@ -145,7 +145,12 @@ function onClick(e) {
     if (!isInteractiveHit(e)) { closeCtx(); closeForm() }
     return
   }
-  if (state.view !== 'links') return
+  if (state.view !== 'links') {
+    /* 主页：拓展坞图标右键菜单打开时，点空白关闭——否则菜单卡住无法收起
+       （links 页点空白走 setView('home') 会顺带关菜单，主页无此路径） */
+    if (ui.ctxMenu.visible && !isInteractiveHit(e)) closeCtx()
+    return
+  }
   /* 链接页有浮层（设置下拉 / 新增编辑表单）时：点击空白先关闭浮层，不切视图。
      交互区内点击（右键菜单项触发编辑/新增、下拉项、磁贴等）用 composedPath 判断，不触发关闭 */
   if (ui.dropdownOpen || ui.linkForm.visible) {

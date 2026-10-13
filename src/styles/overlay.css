@@ -1,0 +1,117 @@
+/* 添加上拉框 / 上下文 / 确认 / 文件夹面板 */
+.overlay-form{position:fixed;z-index:var(--z-form);width:min(340px,90vw);max-height:calc(100vh - 28px);overflow-y:auto;padding:1.1rem 1.2rem;border-radius:18px;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(24px) saturate(170%);-webkit-backdrop-filter:blur(24px) saturate(170%);box-shadow:0 20px 60px rgba(0,0,0,.4);animation:zoomIn .25s var(--ease);}
+.overlay-form.closing{animation:formOut .2s var(--ease) both;}
+@keyframes formOut{from{opacity:1;transform:scale(1);}to{opacity:0;transform:scale(.96);}}
+.overlay-form .f-title{font-size:.95rem;font-weight:600;margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;}
+/* 单个/批量新增模式切换：满宽左对齐的 seg */
+.overlay-form .f-mode{width:100%;justify-content:flex-start;margin-bottom:.9rem;}
+.overlay-form .f-mode button{flex:1;justify-content:center;display:inline-flex;align-items:center;}
+/* 批量新增：多行网址输入 */
+.overlay-form .f-batch{
+  width:100%;min-height:130px;resize:vertical;padding:.6rem .7rem;border-radius:10px;
+  font-size:.85rem;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.7;color:var(--text);
+  background:var(--glass-soft);border:1px solid var(--glass-border);outline:none;transition:border-color .2s;
+}
+.overlay-form .f-batch:focus{border-color:var(--accent);}
+.overlay-form .f-field{margin-bottom:.8rem;}
+.overlay-form label{font-size:.76rem;color:var(--text-dim);display:block;margin-bottom:.3rem;}
+.overlay-form input{width:100%;padding:.55rem .7rem;border-radius:10px;font-size:.9rem;background:var(--glass-soft);border:1px solid var(--glass-border);outline:none;transition:border-color .2s;}
+.overlay-form input:focus{border-color:var(--accent);}
+.overlay-form .f-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.2rem;}
+.overlay-form .f-err{font-size:.76rem;color:#ff7a84;min-height:1em;margin-top:.35rem;}
+/* 所属文件夹自定义下拉（与搜索框引擎下拉同一套玻璃 / 高亮视觉） */
+.overlay-form .fd{position:relative;}
+.overlay-form .fd-trigger{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  padding:.5rem .7rem;border-radius:10px;font-size:.9rem;color:var(--text);text-align:left;
+  background:var(--glass-soft);border:1px solid var(--glass-border);cursor:pointer;outline:none;
+  transition:border-color .2s;
+}
+.overlay-form .fd-trigger:hover{border-color:rgba(var(--accent-rgb),.5);}
+.overlay-form .fd-trigger.open{border-color:var(--accent);}
+.overlay-form .fd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.overlay-form .fd-caret{flex:none;color:var(--text-faint);transition:transform .2s,color .2s;}
+.overlay-form .fd-trigger.open .fd-caret{transform:rotate(180deg);color:var(--accent-text);}
+.overlay-form .fd-dropdown{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:70;
+  max-height:180px;overflow-y:auto;padding:.35rem;border-radius:12px;
+  background:var(--glass-strong);border:1px solid var(--glass-border);
+  backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:0 16px 44px rgba(0,0,0,.35);animation:pop .18s var(--ease) both;
+}
+.overlay-form .fd-item{
+  display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  width:100%;padding:.45rem .7rem;border-radius:9px;font-size:.85rem;color:var(--text);
+  transition:background .18s,color .18s;
+}
+.overlay-form .fd-item:hover{background:rgba(var(--accent-rgb),.16);color:var(--accent-text);}
+.overlay-form .fd-item .fd-item-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.overlay-form .fd-item .fd-check{flex:none;display:flex;color:var(--accent-text);}
+.overlay-form .fd-item.on{color:var(--accent-text);}
+.overlay-form .f-newfolder{width:100%;margin-top:.45rem;padding:.5rem .7rem;border-radius:10px;font-size:.9rem;background:var(--glass-soft);border:1px solid var(--glass-border);outline:none;transition:border-color .2s;}
+.overlay-form .f-newfolder:focus{border-color:var(--accent);}
+.overlay-form .f-newfolder[hidden]{display:none;}
+
+.context-menu{position:fixed;z-index:var(--z-context);min-width:150px;padding:.35rem;border-radius:13px;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);box-shadow:0 16px 44px rgba(0,0,0,.38);animation:pop .18s var(--ease) both;}
+.context-menu button{display:flex;align-items:center;gap:.6rem;width:100%;padding:.5rem .7rem;border-radius:8px;font-size:.88rem;color:var(--text);transition:background .2s,color .2s;}
+.context-menu .cm-ico{flex:none;opacity:.85;display:grid;place-items:center;}
+.context-menu .cm-svg{grid-area:1/1;transform-origin:center;transition:transform .35s var(--ease),opacity .2s var(--ease);}
+.context-menu .cm-svg.cm-b{opacity:0;transform:rotate(90deg) scale(.4);}
+.context-menu button:hover .cm-ico .cm-a{opacity:0;transform:rotate(-90deg) scale(.4);}
+.context-menu button:hover .cm-ico .cm-b{opacity:1;transform:rotate(0) scale(1);}
+.context-menu button:hover{background:rgba(var(--accent-rgb),.16);color:var(--accent-text);}
+.context-menu button.del:hover{background:rgba(231,76,86,.18);color:#ff7a84;}
+
+.confirm-backdrop{position:fixed;inset:0;z-index:var(--z-confirm);display:none;align-items:center;justify-content:center;background:rgba(0,15,18,.45);backdrop-filter:blur(5px);}
+.confirm-backdrop.show{display:flex;}
+.confirm-box{width:min(340px,90vw);padding:1.4rem;border-radius:18px;text-align:center;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(24px);box-shadow:0 20px 60px rgba(0,0,0,.45);animation:zoomIn .25s var(--ease) both;}
+.confirm-box .c-t{font-weight:600;margin-bottom:.5rem;}
+.confirm-box .c-d{font-size:.85rem;color:var(--text-dim);margin-bottom:1.2rem;}
+.confirm-box .c-actions{display:flex;justify-content:center;gap:.7rem;}
+
+/* 手机式文件夹展开面板 */
+.folder-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:rgba(0,15,18,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);}
+.folder-backdrop.show{display:flex;animation:fadeIn .28s ease both;}
+.folder-backdrop.closing{display:flex;animation:fadeOut .45s ease both;}
+.folder-panel{width:min(620px,92vw);max-height:84vh;display:flex;flex-direction:column;padding:1.4rem;border-radius:24px;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);box-shadow:0 26px 80px rgba(0,0,0,.45);animation:folderIn .4s var(--ease) both;}
+.folder-backdrop.closing .folder-panel{animation:folderOut .24s var(--ease) both;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes fadeOut{to{opacity:0;}}
+/* 打开/关闭从文件夹磁贴锚点展开或落回（transform-origin 由组件动态指向磁贴中心，非屏幕中心） */
+@keyframes folderIn{from{opacity:0;transform:scale(.5);}to{opacity:1;transform:scale(1);}}
+@keyframes folderOut{from{opacity:1;transform:scale(1);}to{opacity:0;transform:scale(.5);}}
+/* ============ 文件夹展开动画（设置 → 文件夹展开动画：正常缩放 / 3D 翻转） ============ */
+/* 翻转模式：面板沿 Z 轴 3D 翻转展开/收起（transform-origin 指向文件夹磁贴锚点）。
+   时长 0.75s + 30° 翻转角，让"翻出"过程清晰可见；60% 处已完全不透明，翻转主体不受淡入掩盖 */
+html[data-folder-anim="flip"] .folder-panel{animation:folderFlipIn .75s var(--ease) both;}
+html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:folderFlipOut .4s var(--ease) both;}
+@keyframes folderFlipIn{
+  from{opacity:0;transform:perspective(900px) rotateX(-30deg) scale(.85);}
+  60%{opacity:1;}
+  to{opacity:1;transform:perspective(900px) rotateX(0) scale(1);}
+}
+@keyframes folderFlipOut{
+  from{opacity:1;transform:perspective(900px) rotateX(0) scale(1);}
+  to{opacity:0;transform:perspective(900px) rotateX(30deg) scale(.85);}
+}
+.fp-head{display:flex;flex:none;flex-wrap:wrap;align-items:center;gap:.7rem;margin-bottom:1.1rem;}
+.fp-head .fp-ico{display:flex;color:var(--accent-text);}
+.fp-head .fp-title{font-size:1.08rem;font-weight:600;color:var(--text);}
+.fp-head .fp-title-input{font:inherit;font-weight:600;background:transparent;border:none;border-bottom:1.5px solid var(--accent);outline:none;width:10em;color:var(--text);}
+.fp-head .fp-count{font-size:12px;color:var(--text-faint);background:var(--glass-soft);border-radius:999px;padding:.15rem .55rem;}
+.fp-head .fp-rm{margin-left:auto;color:var(--text-faint);width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s;}
+.fp-head .fp-rm:hover{background:rgba(231,76,86,.18);color:#ff7a84;}
+.fp-grid{display:flex;flex:1 1 auto;min-height:0;flex-wrap:wrap;gap:14px;justify-content:center;align-content:flex-start;overflow-y:auto;padding:6px 2px 10px;scrollbar-width:thin;scrollbar-color:var(--glass-border) transparent;}
+.fp-grid::-webkit-scrollbar{width:8px;}
+.fp-grid::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:8px;}
+.fp-grid .tile{width:96px;padding:13px 8px 11px;}
+.fp-grid .tile .t-ico{width:40px;height:40px;font-size:18px;}
+/* 始终显示：文件夹内添加磁贴与普通磁贴同高（普通磁贴为内容高度），+ 保持居中 */
+body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
+  min-height:calc(13px + 40px + var(--tile-gap-in,12px) + 16px + 11px + 2px);
+}
+.fp-grid.drag-over{outline:2px dashed var(--accent);outline-offset:2px;}
+
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:var(--z-toast);padding:.55rem 1.2rem;border-radius:999px;font-size:.86rem;color:var(--text);background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(16px);box-shadow:var(--shadow);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+.toast.err{border-color:rgba(231,76,86,.6);color:#ff7a84;}
