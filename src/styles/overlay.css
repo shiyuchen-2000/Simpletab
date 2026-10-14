@@ -112,6 +112,116 @@ body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
 }
 .fp-grid.drag-over{outline:2px dashed var(--accent);outline-offset:2px;}
 
+/* ============ 封面流（cover flow）：文件夹 3D 滚筒切换 ============ */
+.folder-backdrop .cf{
+  position:relative;width:min(1140px,96vw);height:78vh;
+  display:flex;align-items:center;justify-content:center;
+  perspective:1500px;perspective-origin:center;
+  /* 不设 overflow:hidden：切换按钮朝屏幕外侧的光带需溢出容器可见；
+     超出视口部分由 body overflow:hidden 兜底（光带末端已渐隐，无硬切边） */
+}
+/* 面板定位 / 3D 变换（rotateY / translateZ / scale）由 FolderPanel JS 注入内联 transform，
+   此处仅负责过渡与基础尺寸；两侧 transition 略慢 → 切换时面板间视差。
+   中间面板高度内容自适应（.folder-panel 原尺寸），不强制撑满 */
+.cf-panel{
+  position:absolute;left:50%;top:50%;
+  width:min(620px,92vw);height:auto;
+  transform-origin:center;
+  transition:transform .55s var(--ease),opacity .55s var(--ease),filter .55s var(--ease);
+  will-change:transform,opacity,filter;
+  backface-visibility:hidden;
+}
+/* 快速连续切换：大幅缩短过渡，动画直接到位不叠加卡顿 */
+.cf.fast .cf-panel{transition-duration:.12s !important;}
+/* 远处面板：轻量占位，保持滚筒进入/离开过渡的稳定尺寸（不渲染磁贴省 DOM） */
+.cf-blank{width:100%;min-height:44vh;}
+/* 两侧预览卡片：磨砂玻璃底 + 磁贴网格（网格不滚动，超出裁剪） */
+.cf-preview{
+  width:100%;max-height:84vh;
+  display:flex;flex-direction:column;overflow:hidden;
+  border-radius:24px;padding:1.4rem;
+  background:var(--glass-strong);border:1px solid var(--glass-border);
+  backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);
+  box-shadow:0 26px 80px rgba(0,0,0,.45);
+}
+.cf-preview .fp-head{margin-bottom:1.1rem;}
+.cf-grid{flex-wrap:wrap;gap:14px;justify-content:center;align-content:flex-start;overflow:hidden;}
+/* 左右切换按钮：竖直长条（约与文件夹等高），无边框无底色（裸图标）。
+   hover 光效：内侧（朝向文件夹一侧）一条边界线（inset 内阴影），
+   外侧 + 上/下 三边无边界发散光晕（外阴影）——按钮主体保持透明 */
+.cf-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:10;
+  width:52px;height:min(56vh,440px);border-radius:18px;
+  display:grid;place-items:center;
+  background:transparent;border:none;
+  /* 禁用 focus outline：长条切换按钮不显示 focus 边框（点击后不残留"一圈边框"） */
+  outline:none;-webkit-tap-highlight-color:transparent;
+  color:var(--accent-text);
+  cursor:pointer;
+  transition:box-shadow .25s,color .25s,transform .25s;
+}
+.cf-arrow:hover{color:var(--accent);}
+/* 光带从内侧（朝向文件夹一侧）边缘向另一侧延伸，无四边边框。
+   羽化：右按钮上/右/下三边晕开成光晕（左内缘为起点），左按钮上/左/下三边同理 */
+/* 单一连续渐变光带：background 与 box-shadow 分离会在衔接处亮度塌陷产生"断层"，
+   故只用一层 linear-gradient（内缘亮 → 均匀渐隐到透明）+ blur 统一羽化，无断层 */
+.cf-arrow-r::before,.cf-arrow-l::before{
+  content:"";position:absolute;top:8%;bottom:8%;width:80px;
+  filter:blur(6px);pointer-events:none;opacity:0;transition:opacity .3s;
+}
+/* 四角圆角：配合 blur 柔化边缘，看不出边界 */
+.cf-arrow-r::before{left:2px;border-radius:20px;background:linear-gradient(to right, rgba(var(--accent-rgb),.4), rgba(var(--accent-rgb),0));}
+.cf-arrow-l::before{right:2px;border-radius:20px;background:linear-gradient(to left, rgba(var(--accent-rgb),.4), rgba(var(--accent-rgb),0));}
+.cf-arrow-r:hover::before,.cf-arrow-l:hover::before{opacity:1;}
+.cf-arrow:active{transform:translateY(-50%) scale(.96);}
+/* 按钮略微内移：为朝屏幕外侧延伸的光带留出可视空间（贴边会被裁掉） */
+.cf-arrow-l{left:24px;}
+.cf-arrow-r{right:24px;}
+@media (max-width:760px){.cf-arrow{width:44px;height:min(44vh,320px);border-radius:14px;}.cf-arrow-l{left:0;}.cf-arrow-r{right:0;}}
+/* 分页指示：当前文件夹为加长主题色条，其余小圆点，点击跳转对应文件夹（无背景） */
+.cf-dots{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;
+  display:flex;align-items:center;gap:8px;
+}
+.cf-dot{
+  width:8px;height:8px;border-radius:999px;border:none;padding:0;
+  background:rgba(255,255,255,.45);
+  cursor:pointer;transition:width .25s,background .25s,box-shadow .25s;
+}
+.cf-dot:hover{background:rgba(255,255,255,.85);}
+.cf-dot.on{
+  width:22px;background:var(--accent);
+  box-shadow:0 0 8px rgba(var(--accent-rgb),.7);
+}
+/* 新建文件夹：无边框小 +，hover 主题色填充 + 光晕 */
+.cf-add{
+  width:22px;height:22px;border-radius:50%;border:none;background:transparent;
+  display:grid;place-items:center;color:rgba(var(--accent-rgb),.8);
+  cursor:pointer;transition:background .2s,color .2s,box-shadow .2s;
+}
+.cf-add:hover{color:var(--accent);background:rgba(var(--accent-rgb),.18);box-shadow:0 0 10px rgba(var(--accent-rgb),.4);}
+/* 滚轮切换提示：无背景无边框纯文字，位于分页点上方。
+   iOS 7「滑动以解锁」式扫光：文字背景为明暗渐变（background-clip:text，repeat 无缝循环），
+   一条亮光带匀速地从右向左持续扫过文字（linear 无端点停顿），直到提示消失 */
+.cf-hint{
+  position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);
+  font-size:.82rem;font-weight:500;letter-spacing:.05em;white-space:nowrap;
+  /* size 200%：保证 background-position 有移动空间（等宽时百分比无效会完全不动） */
+  background:linear-gradient(90deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.95) 50%, rgba(255,255,255,.35) 100%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow:0 1px 4px rgba(0,0,0,.5),0 0 12px rgba(0,0,0,.35);
+  animation:cfHintSweep 3.6s linear infinite;
+}
+@keyframes cfHintSweep{
+  0%{background-position:0 0;}
+  100%{background-position:-200% 0;}
+}
+.cfhint-enter-active,.cfhint-leave-active{transition:opacity .5s var(--ease),transform .5s var(--ease);}
+.cfhint-enter-from,.cfhint-leave-to{opacity:0;transform:translateX(-50%) translateY(4px);}
+
 .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:var(--z-toast);padding:.55rem 1.2rem;border-radius:999px;font-size:.86rem;color:var(--text);background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(16px);box-shadow:var(--shadow);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
 .toast.err{border-color:rgba(231,76,86,.6);color:#ff7a84;}

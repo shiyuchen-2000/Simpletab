@@ -62,10 +62,11 @@ export const ui = reactive({
   searchFilter: '',
   flip: false,
   linkForm: { visible: false, closing: false, mode: 'add', id: null, url: '', name: '', batch: false, batchText: '', folderSel: '', newFolder: '', err: '', top: 0, left: 0, origin: '50% 50%' },
-  ctxMenu: { visible: false, x: 0, y: 0, items: [], linkId: null, inFolder: false },
+  ctxMenu: { visible: false, x: 0, y: 0, items: [], linkId: null, folderId: null, inFolder: false },
   confirm: { visible: false, title: '', desc: '', kind: null, linkId: null, folderId: null, dockId: null, presetId: null },
   folderOpenId: null,
   folderClosing: false,
+  pendingReleaseFid: null,      // 待解散释放的文件夹 id（文件夹消失动画结束 after-leave 时释放链接）
   toast: { visible: false, msg: '', err: false },
   fontList: [],
   tourActive: false,              // 新手指引进行中

@@ -6,6 +6,13 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上。items 为 { t, tag }，tag: 'new' 新增（绿）/ 'fix' 修复（黄），缺省无标签 */
 const CHANGES = [
   {
+    ver: 'v1.7.5',
+    items: [
+      { t: '新增文件夹切换分页：滚轮 / 箭头 / 分页点 3D 滚筒切换，两侧磨砂预览，快速切换不卡顿', tag: 'new' },
+      { t: '优化拖拽创建文件夹：图标重叠合并预览，消失与生成动画衔接、其余图标平滑补位', tag: 'new' }
+    ]
+  },
+  {
     ver: 'v1.7.1',
     items: [
       { t: '新增 / 编辑表单从触发磁贴锚点展开，关闭收回磁贴' },
@@ -99,7 +106,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.7.1</span>
+            <span class="am-chip">v1.7.5</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>

@@ -5,11 +5,11 @@
 // 依赖：state/ui/toast（state.js）、save（persistence.js）、folders / links / presets / layout / reset
 // 副作用（模块加载即注册）：视图状态 body 类同步
 // ============================================================
-import { watchEffect } from 'vue'
+import { watch, watchEffect } from 'vue'
 import { state, ui, toast } from './state'
 import { save } from './persistence'
 import { closeFolder, pruneEmptyFolders } from './folders'
-import { openEditForm, moveOutFolder } from './links'
+import { openEditForm, moveOutFolder, closeForm } from './links'
 import { deletePreset } from './presets'
 import { resetPageLayout } from './layout'
 import { resetSettings } from './reset'
@@ -79,10 +79,16 @@ watchEffect(() => {
   document.body.classList.toggle('dock-visible', visible)
 })
 
+/* 浮层协调：打开文件夹面板时收起新增/编辑表单（表单不与文件夹同屏）。
+   注意不做反向（表单打开时不关文件夹）——文件夹内点「+」添加链接时，
+   表单锚定在面板内磁贴上、需与面板共存，不能自动关文件夹 */
+watch(() => ui.folderOpenId, v => { if (v) closeForm() })
+
 /* ---------- 右键 / 上下文菜单 ---------- */
-export function openCtxAt(e, items, linkId, inFolder) {
+export function openCtxAt(e, items, linkId, inFolder, folderId) {
   ui.ctxMenu.items = items
   ui.ctxMenu.linkId = linkId
+  ui.ctxMenu.folderId = folderId || null
   ui.ctxMenu.inFolder = !!inFolder
   ui.ctxMenu.visible = true
   ui.ctxMenu.x = e.clientX
@@ -110,7 +116,13 @@ export function ctxAction(act) {
     if (l) { closeCtx(); showConfirm('dock', null, null, l.id, '从拓展坞删除「' + l.title + '」？', '仅从拓展坞移除，链接不会被删除') }
   } else if (act === 'del') {
     closeCtx(); deleteLink(id)
+  } else if (act === 'del-folder') {
+    closeCtx(); deleteFolder(ui.ctxMenu.folderId)
   }
+}
+/* 文件夹磁贴右键菜单：解散文件夹（二次确认） */
+export function buildFolderCtxItems(folderId) {
+  return [{ act: 'del-folder', label: '解散文件夹', icon: 'trash', danger: true }]
 }
 export function buildCtxItems(linkId, inFolder) {
   const l = state.links.find(x => x.id === linkId)
@@ -145,10 +157,13 @@ export function confirmOk() {
     const l = state.links.find(x => x.id === c.dockId)
     if (l) { l.inDock = false; toast('已从拓展坞删除「' + l.title + '」') }
   } else if (c.kind === 'folder') {
-    state.links.forEach(l => { if (l.folderId === c.folderId) l.folderId = null })
-    state.folders = state.folders.filter(x => x.id !== c.folderId)
+    /* 先移除文件夹磁贴（播消失动画），链接待其动画结束（after-leave）再释放——
+       避免「链接先出现让位、文件夹再消失补位」的两段移动 */
+    const fid = c.folderId
+    state.folders = state.folders.filter(x => x.id !== fid)
+    ui.pendingReleaseFid = fid
     closeFolder()
-    toast('文件夹已删除')
+    toast('文件夹已解散')
   } else if (c.kind === 'link') {
     const l = state.links.find(x => x.id === c.linkId)
     if (l) {

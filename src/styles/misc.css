@@ -4,8 +4,8 @@
 [data-theme="light"] .tile .t-ico[data-ic="auto"], [data-theme="light"] .dock-item[data-ic="auto"]{background:#fff;color:#1a2b30;box-shadow:0 6px 16px rgba(13,43,46,.12);}
 [data-theme="dark"] .tile .t-ico[data-ic="auto"], [data-theme="dark"] .dock-item[data-ic="auto"]{background:#0b0f14;color:#eef4ff;box-shadow:0 6px 16px rgba(0,0,0,.35);}
 
-/* 拖拽换位动画（TransitionGroup move）：磁贴位置变化平滑过渡 */
-.tile-move{transition:transform .32s var(--ease) !important;}
+/* 拖拽换位动画（TransitionGroup move）：磁贴位置变化平滑过渡（含增删时其余图标补位） */
+.tile-move{transition:transform .4s var(--ease) !important;}
 
 /* 搜索栏：交换搜索引擎与搜索图标位置（引擎在左、图标在右，图标内收） */
 /* 图标脱离 flex 流、绝对定位于右缘：宽度展开动画不重排图标 */

@@ -79,8 +79,23 @@ export function closeForm() {
 }
 export function saveForm() {
   const url = normalizeUrl(ui.linkForm.url)
+  const titleInput = ui.linkForm.name.trim()
+  /* 标题、网址都空（仅添加模式）→ 新建空文件夹。
+     优先用「＋新建文件夹」里输入的名称，否则默认「新文件夹」，重名自动加序号 */
+  if (!url && !titleInput && ui.linkForm.mode === 'add') {
+    const base = (ui.linkForm.folderSel === '__new' ? ui.linkForm.newFolder.trim() : '') || '新文件夹'
+    let i = 1
+    let ft = base
+    const names = new Set(state.folders.map(f => f.title))
+    while (names.has(ft)) { i++; ft = base + ' ' + i }
+    state.folders.push({ id: uid(), title: ft })
+    ui.linkForm.visible = false
+    save()
+    toast('已创建「' + ft + '」')
+    return
+  }
   if (!url) { ui.linkForm.err = '网址无效，请检查后重试'; return }
-  const title = ui.linkForm.name.trim() || new URL(url).hostname.replace(/^www\./, '')
+  const title = titleInput || new URL(url).hostname.replace(/^www\./, '')
   let folderId = null
   const fv = ui.linkForm.folderSel
   if (fv === '__new') {
@@ -171,4 +186,21 @@ export function openLinkUrl(url) {
   /* 实时预览模式：禁止访问链接，仅提示 */
   if (ui.preview) { toast('预览模式下不可打开链接'); return }
   window.open(url, state.linkOpenIn === 'self' ? '_self' : '_blank')
+}
+/* 两个链接合并为文件夹：新建空文件夹（默认命名「新文件夹」避重名）并把两链接移入。
+   由 LinkGrid 拖拽图标重叠触发，返回新文件夹对象（未 push 到 folders——
+   调用方在图标消失动画结束（after-leave）时 push，使剩余图标一次补位到含文件夹的
+   最终布局，避免「先补位、文件夹出现再让位」的两段移动）。任一路径缺失返回 null */
+export function mergeLinksToFolder(idA, idB) {
+  const a = state.links.find(x => x.id === idA)
+  const b = state.links.find(x => x.id === idB)
+  if (!a || !b) return null
+  let i = 1
+  let title = '新文件夹'
+  const names = new Set(state.folders.map(f => f.title))
+  while (names.has(title)) { i++; title = '新文件夹 ' + i }
+  const f = { id: uid(), title }
+  a.folderId = f.id
+  b.folderId = f.id
+  return f
 }

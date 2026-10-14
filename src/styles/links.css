@@ -58,6 +58,16 @@ body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.33s;}
   60%{opacity:1;transform:translateY(5px) scale(1.01);}
   to{opacity:0;transform:translateY(-20px) scale(.94);}
 }
+/* 磁贴进入动画（TransitionGroup enter）：淡入 + 放大——与 leave 的缩小消失形成缩放衔接 */
+.tile-enter-active{transition:opacity .3s var(--ease),transform .3s var(--ease);}
+.tile-enter-from{opacity:0;transform:scale(.92);}
+/* 磁贴移除消失动画（TransitionGroup leave）：缓慢淡出 + 向下沉入缩小 */
+.tile-leave-active{transition:opacity .45s var(--ease),transform .45s var(--ease);}
+.tile-leave-to{opacity:0;transform:translateY(10px) scale(.9);}
+/* 磁贴增删动画期间隐藏链接区滚动条：布局高度瞬时波动（合并/解散）时避免滚动条闪现。
+   :has 覆盖动画类存在的时段；.tile-anim 由 JS 覆盖动画类间隙（合并图标消失结束→文件夹生成） */
+.link-area:has(.tile-enter-active),.link-area:has(.tile-leave-active),.link-area.tile-anim{scrollbar-width:none;-ms-overflow-style:none;}
+.link-area:has(.tile-enter-active)::-webkit-scrollbar,.link-area:has(.tile-leave-active)::-webkit-scrollbar,.link-area.tile-anim::-webkit-scrollbar{display:none;}
 .link-area{
   /* fit-content：宽度收缩到磁贴实际宽度并整体居中（不偏左）；磁贴多到超宽时铺满父容器换行左对齐 */
   width:fit-content;max-width:100%;margin:30vh auto 0;
@@ -155,6 +165,27 @@ body.tile-text-none .link-area .tile:not(.add),body.tile-text-none .fp-grid .til
 [data-theme="dark"] .folder-tile .f-grid .mini-add{color:rgba(0,0,0,.42);background-color:rgba(0,0,0,.16);}
 .folder-tile:hover .f-grid .mini-add{color:var(--accent);background-color:rgba(var(--accent-rgb),.25);}
 .folder-tile.drag-in{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.35);}
+
+/* 图标重叠创建文件夹：目标磁贴合并预览态（accent 光晕 + 轻微放大）。
+   光晕/缩放保持在磁贴范围内，避免被滚动容器裁切 */
+.tile.merge-target{
+  border-color:var(--accent);
+  background:rgba(var(--accent-rgb),.16);
+  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.3),0 0 16px rgba(var(--accent-rgb),.35);
+  transform:translateY(var(--tile-hover-lift,-5px)) scale(1.05);
+  z-index:2;
+}
+/* 合并预览徽标：磁贴内部右上角文件夹图标，脉动强调（不出界避免被裁） */
+.merge-badge{
+  position:absolute;top:6px;right:6px;z-index:3;
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;color:#fff;
+  background:var(--accent);box-shadow:0 3px 10px rgba(var(--accent-rgb),.6);
+  animation:mergePulse 1s ease-in-out infinite;
+}
+@keyframes mergePulse{0%,100%{transform:scale(1);}50%{transform:scale(1.14);}}
+.mg-enter-active,.mg-leave-active{transition:opacity .25s var(--ease),transform .25s var(--ease);}
+.mg-enter-from,.mg-leave-to{opacity:0;transform:scale(.4);}
 
 /* 玻璃高光：面板顶部 1px 反光边（box-shadow 内描边，不新增合成层） */
 body.glass-shine .tile:not(.add){box-shadow:inset 0 1px 0 var(--glass-topline);}

@@ -1,12 +1,14 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue'
-import { state, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl } from '../store'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { state, ui, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl, mergeLinksToFolder } from '../store'
 import { faviconSrc } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 const areaRef = ref(null)
 const draggingId = ref(null)
 const dragInFid = ref(null)
+const mergeTargetId = ref(null)   // 图标重叠合并目标链接 id（悬停另一磁贴上预览创建文件夹）
+const pendingFolder = ref(null)   // 待生成文件夹（图标消失动画结束 after-leave 时 push）
 const dropTargetIdx = ref(-1)   // 拖拽目标插入位（B：拖动中记录，松手时按此换位落位）
 /* 透明拖拽镜像：隐藏浏览器默认 drag image，避免与被拖图标实时移动造成"双层" */
 const emptyDragImage = new Image()
@@ -64,6 +66,7 @@ function onLinkDragstart(e, id) {
   draggingId.value = id
   dropped = false; lastLinkTarget = -1; lastFolderTarget = -1; lastMoveTime = 0
   snapshotOrder()
+  pauseTileObserver()   // 拖拽中磁贴实时重排会触发补位观察器 → 抽搐，暂停
 }
 function onFolderDragstart(e, fid) {
   e.dataTransfer.setData('text/folder', fid)
@@ -73,6 +76,29 @@ function onFolderDragstart(e, fid) {
   draggingId.value = 'f:' + fid
   dropped = false; lastLinkTarget = -1; lastFolderTarget = -1; lastMoveTime = 0
   snapshotOrder()
+  pauseTileObserver()
+}
+/* 拖拽期间暂停补位观察器（拖拽实时换位会触发 childList → 补位动画叠加成抽搐） */
+function pauseTileObserver() { tileObserver?.disconnect() }
+function resumeTileObserver() { observeTileShifts() }
+/* after-leave（磁贴消失动画结束）：同帧完成合并/解散的收尾，使剩余图标一次补位到最终布局
+   —— 合并：生成文件夹；解散：释放文件夹内链接回根级。避免「先补位、再让位」两段移动 */
+function onAfterTileLeave() {
+  if (pendingFolder.value) {
+    state.folders.push(pendingFolder.value)
+    save()
+    pendingFolder.value = null
+  } else if (ui.pendingReleaseFid) {
+    const fid = ui.pendingReleaseFid
+    ui.pendingReleaseFid = null
+    state.links.forEach(l => { if (l.folderId === fid) l.folderId = null })
+    save()
+  }
+  /* 合并/解散动画（文件夹 enter + 补位）结束后恢复滚动条显示 */
+  const area = areaRef.value?.$el
+  if (area && area.classList.contains('tile-anim')) {
+    setTimeout(() => area.classList.remove('tile-anim'), 750)
+  }
 }
 function restoreOrder() {
   if (draggingId.value?.startsWith('f:')) {
@@ -87,6 +113,7 @@ function onDragend(e) {
   draggingId.value = null
   dragInFid.value = null
   clearDropFx()
+  resumeTileObserver()   // 恢复补位观察（此时图标可能仍在消失动画中，快照含旧位置，移除后仍正确补位）
 }
 function onFolderDragover(e, fid) {
   if (e.dataTransfer.types.includes('text/link')) {
@@ -95,6 +122,38 @@ function onFolderDragover(e, fid) {
   }
 }
 function onFolderDragleave() { dragInFid.value = null }
+/* ---------- 图标重叠创建文件夹：链接拖到另一链接上，预览 → 松手合并 ---------- */
+function onLinkDragover(e, l) {
+  if (!e.dataTransfer.types.includes('text/link') || draggingId.value === l.id) return
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move'
+  mergeTargetId.value = l.id   // 目标磁贴进入合并预览态
+}
+function onLinkDragleave(e, l) {
+  if (mergeTargetId.value !== l.id) return
+  /* 仅当真正离开磁贴区（relatedTarget 不在任何磁贴内）才取消预览，避免子元素抖动 */
+  const rt = e.relatedTarget
+  if (!rt || !rt.closest || !rt.closest('.link-area .tile[data-id]')) mergeTargetId.value = null
+}
+function onLinkDrop(e, l) {
+  const lid = e.dataTransfer.getData('text/link')
+  if (lid && mergeTargetId.value === l.id) {
+    /* 链接合并场景：本磁贴处理，阻止冒泡——否则区域 onAreaDrop 的
+       「若从文件夹拖出则移出」会把刚合并的链接 folderId 拉回根级（只剩一个图标） */
+    e.preventDefault()
+    e.stopPropagation()
+    dropped = true
+    if (lid !== l.id) {
+      /* 合并：图标先移入（播消失动画），文件夹在 after-leave（图标消失结束）时 push */
+      pendingFolder.value = mergeLinksToFolder(lid, l.id)
+      toast('已创建「新文件夹」')
+      areaRef.value?.$el?.classList.add('tile-anim')   // 动画全程隐藏滚动条（覆盖动画类间隙）
+    }
+    mergeTargetId.value = null
+    return
+  }
+  /* 其他拖拽（如文件夹经过本磁贴）：不拦截，冒泡到区域 onAreaDrop 正常落位 */
+  mergeTargetId.value = null
+}
 function onFolderDrop(e, fid) {
   e.preventDefault()
   dropped = true
@@ -155,10 +214,59 @@ function computeInsertIndex(container, clientX, clientY) {
 }
 function clearDropFx() {
   dropTargetIdx.value = -1
+  mergeTargetId.value = null
   document.querySelectorAll('.drag-in').forEach(x => x.classList.remove('drag-in'))
 }
-// 组件卸载时清理拖拽状态
-onBeforeUnmount(clearDropFx)
+/* ---------- 手动补位动画：磁贴增删后其余图标平滑移动填补空位 ----------
+   Vue 3.4 的 TransitionGroup move 不处理「移除元素占位、之后其余元素位移」的场景（会闪现），
+   这里用 MutationObserver 监听磁贴增删，对比前后位置用 WAAPI 补位（合并/解散/删除均覆盖） */
+let tileObserver = null
+let prevTileRects = new Map()
+function snapshotTileRects() {
+  const area = areaRef.value?.$el
+  if (!area) return new Map()
+  const map = new Map()
+  area.querySelectorAll('.tile:not(.add)').forEach(el => {
+    const r = el.getBoundingClientRect()
+    const key = el.dataset.id || el.dataset.fid
+    if (key) map.set(key, { x: r.left, y: r.top })
+  })
+  return map
+}
+function observeTileShifts() {
+  tileObserver?.disconnect()
+  const area = areaRef.value?.$el
+  if (!area) return
+  prevTileRects = snapshotTileRects()
+  tileObserver = new MutationObserver(() => {
+    requestAnimationFrame(() => {
+      const a = areaRef.value?.$el
+      if (!a) return
+      const now = new Map()
+      a.querySelectorAll('.tile:not(.add)').forEach(el => {
+        const r = el.getBoundingClientRect()
+        const key = el.dataset.id || el.dataset.fid
+        if (!key) return
+        const p = prevTileRects.get(key)
+        if (p && (p.x !== r.left || p.y !== r.top)) {
+          el.animate(
+            [
+              { transform: `translate(${p.x - r.left}px, ${p.y - r.top}px)` },
+              { transform: 'translate(0,0)' }
+            ],
+            { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
+          )
+        }
+        now.set(key, { x: r.left, y: r.top })
+      })
+      prevTileRects = now
+    })
+  })
+  tileObserver.observe(area, { childList: true })
+}
+onMounted(() => { observeTileShifts() })
+// 组件卸载时清理拖拽状态与观察器
+onBeforeUnmount(() => { tileObserver?.disconnect(); clearDropFx() })
 
 function onAreaDragover(e) {
   const types = e.dataTransfer.types
@@ -243,9 +351,9 @@ function onAreaDrop(e) {
 
 <template>
   <TransitionGroup tag="div" name="tile" class="link-area" id="linkArea" ref="areaRef"
-       @dragover="onAreaDragover" @drop="onAreaDrop">
+       @dragover="onAreaDragover" @drop="onAreaDrop" @after-leave="onAfterTileLeave">
 
-    <!-- 文件夹磁贴 -->
+    <!-- 文件夹磁贴（恒排最前） -->
     <div v-for="f in state.folders" :key="f.id"
          class="tile folder-tile" :data-fid="f.id" draggable="true"
          :class="{ 'drag-in': dragInFid === f.id, dragging: draggingId === 'f:' + f.id }"
@@ -255,27 +363,41 @@ function onAreaDrop(e) {
          @drop.stop="onFolderDrop($event, f.id)">
       <div class="f-grid">
         <template v-if="folderMinis(f.id).length">
-          <div v-for="(l, i) in folderMinis(f.id)" :key="i" class="mini" :style="miniStyle(l)">
-            <LetterIco v-if="!miniStyle(l).backgroundImage" :letter="letterOf(l.title)" />
+          <div v-for="(m, i) in folderMinis(f.id)" :key="i" class="mini" :style="miniStyle(m)">
+            <LetterIco v-if="!miniStyle(m).backgroundImage" :letter="letterOf(m.title)" />
           </div>
         </template>
         <div v-else class="mini mini-add">+</div>
       </div>
       <div class="t-name">{{ f.title }}</div>
+      <!-- 移入文件夹提示徽标（拖拽链接悬停时出现） -->
+      <Transition name="mg">
+        <div v-if="dragInFid === f.id" class="merge-badge fdir-badge" title="移入文件夹">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/><path d="M12 11v6"/><path d="m9 14 3 3 3-3"/></svg>
+        </div>
+      </Transition>
     </div>
 
-    <!-- 根级链接磁贴 -->
+    <!-- 根级链接磁贴（图标重叠可创建文件夹） -->
     <div v-for="l in rootLinks" :key="l.id"
          class="tile" :data-id="l.id" draggable="true"
-         :class="{ dragging: draggingId === l.id }"
+         :class="{ dragging: draggingId === l.id, 'merge-target': mergeTargetId === l.id }"
          @click="openLink(l)"
-         @dragstart="onLinkDragstart($event, l.id)" @dragend="onDragend">
+         @dragstart="onLinkDragstart($event, l.id)" @dragend="onDragend"
+         @dragover="onLinkDragover($event, l)" @dragleave="onLinkDragleave($event, l)"
+         @drop="onLinkDrop($event, l)">
       <div class="t-ico" :data-ic="l.iconMode">
         <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              @error="onTileImgError" @load="onTileImgLoad">
         <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
       </div>
       <div class="t-name">{{ l.title }}</div>
+      <!-- 合并预览徽标：松手创建文件夹 -->
+      <Transition name="mg">
+        <div v-if="mergeTargetId === l.id" class="merge-badge" title="松手创建文件夹">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+        </div>
+      </Transition>
     </div>
 
     <!-- 添加入口 -->

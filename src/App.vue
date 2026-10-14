@@ -1,6 +1,6 @@
 <script setup>
 import { computed, watch, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, dockVisible, isVideoWallpaper, initWallpaperRotate } from './store'
+import { state, ui, setView, closeFolder, closeCtx, closeForm, openCtxAt, buildCtxItems, buildFolderCtxItems, dockVisible, isVideoWallpaper, initWallpaperRotate } from './store'
 import ClockView from './components/ClockView.vue'
 import SearchBar from './components/SearchBar.vue'
 import LayoutEditor from './components/LayoutEditor.vue'
@@ -63,7 +63,7 @@ watch(() => state.view, async v => {
   el.classList.add('view-enter')
 })
 
-const INTERACTIVE = '.tile, #gearZone, .dropdown, .modal-backdrop, .overlay-form, .context-menu, .confirm-backdrop, .folder-backdrop, .toast, .preview-back'
+const INTERACTIVE = '.tile, #gearZone, .dropdown, .modal-backdrop, .overlay-form, .context-menu, .confirm-backdrop, .folder-panel, .toast, .preview-back'
 
 function onContextMenu(e) {
   /* 实时预览模式：仅保留主页空白右键切视图，其余（磁贴/拓展坞/文件夹右键菜单）一律禁用 */
@@ -87,8 +87,13 @@ function onContextMenu(e) {
   }
   if (state.view === 'links') {
     const tile = e.target.closest('.tile')
-    if (tile && !tile.classList.contains('add') && !tile.classList.contains('folder-tile')) {
+    if (tile && !tile.classList.contains('add')) {
       e.preventDefault()
+      if (tile.classList.contains('folder-tile')) {
+        /* 文件夹磁贴：右键菜单（删除文件夹，二次确认） */
+        openCtxAt(e, buildFolderCtxItems(tile.dataset.fid), null, false, tile.dataset.fid)
+        return
+      }
       const inFolder = !!e.target.closest('.fp-grid')
       const id = tile.dataset.id
       openCtxAt(e, buildCtxItems(id, inFolder), id, inFolder)
@@ -160,8 +165,13 @@ function onClick(e) {
     return
   }
   if (ui.folderOpenId || ui.folderClosing) {
-    if (e.target.classList.contains('folder-backdrop')) closeFolder()
-    else if (!e.target.closest('.context-menu')) closeCtx()   // 文件夹内点空白 / 磁贴：关闭右键菜单
+    /* 空白关闭统一收口到这里（backdrop/cf 不再各自 @click.self 抢先触发）：
+       表单打开时上方 linkForm 分支已先关表单并 return，此处不会误关文件夹——
+       顺序即「先关添加弹窗，再点一次才关文件夹」。
+       点 backdrop 自身 / cf 空白 → 关文件夹；面板/磁贴等交互区 → 仅关右键菜单 */
+    if (e.target.classList.contains('folder-backdrop')) { closeFolder(); return }
+    if (isInteractiveHit(e)) { closeCtx(); return }
+    closeFolder()
     return
   }
   if (!isInteractiveHit(e)) setView('home')
