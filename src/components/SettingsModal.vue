@@ -1,35 +1,40 @@
 <script setup>
-/* 设置弹窗壳：弹窗框架 / 左侧目录 / 搜索 / 实时预览 / 个性化 / 重置。
+/* 设置弹窗壳：弹窗框架 / 左侧目录 / 搜索 / 实时预览 / 常用设置 / 重置。
    设置行渲染在 settings/SettingsRows.vue（含子行组件），配置声明在 settings/config.js */
-import { computed, nextTick, ref } from 'vue'
-import { state, ui, toast, setView, showConfirm, DEFAULT_SETTINGS } from '../store'
+import { computed, ref } from 'vue'
+import { state, ui, toast, save, setView, showConfirm, DEFAULT_SETTINGS } from '../store'
 import { useGearModal } from '../store/useGearModal'
-import { GROUPS, BASIC_ROWS, keywordMatch } from '../settings/config'
+import { GROUPS, ROWS_BY_ID, UNPINNABLE_ROWS, keywordMatch } from '../settings/config'
 import SettingsRows from './settings/SettingsRows.vue'
 import PresetPanel from './settings/PresetPanel.vue'
 
-let initPersonalized = false
-try { initPersonalized = localStorage.getItem('simpletab_personalized') === '1' } catch (e) { /* ignore */ }
-const showPersonalized = ref(initPersonalized)
 const smScrollRef = ref(null)
-function togglePersonalized() {
-  showPersonalized.value = !showPersonalized.value
-  try { localStorage.setItem('simpletab_personalized', showPersonalized.value ? '1' : '0') } catch (e) { /* ignore */ }
-  if (showPersonalized.value) {
-    /* 展开后默认回到顶部，从「收起个性化」开始浏览全量设置 */
-    nextTick(() => { if (smScrollRef.value) smScrollRef.value.scrollTop = 0 })
-  }
-}
+/* 全部设置直接展示；搜索时按关键词过滤 */
 const visibleRows = computed(() => {
   const q = ui.searchFilter.trim().toLowerCase()
-  const all = GROUPS
-  /* 搜索时全量匹配，绕过简单/个性化模式，避免搜不到 */
-  if (q) return all.map(g => ({ label: g.label, rows: g.rows.filter(r => keywordMatch(r, q)) })).filter(g => g.rows.length > 0)
-  /* 展开个性化：全量展示 */
-  if (showPersonalized.value) return all.filter(g => g.rows.length > 0)
-  /* 简单模式：只显示常用项（颜色 + 布局） */
-  return all.map(g => ({ label: g.label, rows: g.rows.filter(r => BASIC_ROWS.has(r.id)) })).filter(g => g.rows.length > 0)
+  if (q) return GROUPS.map(g => ({ label: g.label, rows: g.rows.filter(r => keywordMatch(r, q)) })).filter(g => g.rows.length > 0)
+  return GROUPS.filter(g => g.rows.length > 0)
 })
+/* 常用设置：按收藏顺序取回行配置，星标在行内切换 */
+const pinnedRows = computed(() => (state.pinnedSettings || [])
+  .filter(id => !UNPINNABLE_ROWS.has(id))
+  .map(id => ROWS_BY_ID[id])
+  .filter(Boolean))
+/* 清空收藏：按钮自身二次确认（3 秒内再点生效），不弹确认框 */
+const pinClearArmed = ref(false)
+let pinClearTimer = null
+function onClearPinned() {
+  if (!pinClearArmed.value) {
+    pinClearArmed.value = true
+    clearTimeout(pinClearTimer)
+    pinClearTimer = setTimeout(() => { pinClearArmed.value = false }, 3000)
+    return
+  }
+  clearTimeout(pinClearTimer)
+  pinClearArmed.value = false
+  state.pinnedSettings = []
+  save()
+}
 
 /* 左侧悬浮目录：当前分组 / 点击快速定位 / 滚动联动高亮 */
 const activeGroup = ref('')
@@ -109,6 +114,8 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
   <div class="modal-backdrop" :class="{ show: ui.modal === 'settings' && !closing, closing }" @click.self="closeModal">
     <div class="sm-wrap">
       <nav class="set-nav">
+        <!-- 常用设置入口：有收藏项才显示，随收藏动态出现/消失 -->
+        <button v-if="pinnedRows.length && !ui.searchFilter" type="button" :class="{ on: activeGroup === '常用设置' }" @click="scrollToGroup('常用设置')">常用设置</button>
         <button v-for="g in visibleRows" :key="'nav-' + g.label" type="button" :class="{ on: activeGroup === g.label }" @click="scrollToGroup(g.label)">{{ g.label }}</button>
       </nav>
       <div class="modal settings-modal" ref="modalRef" :style="{ transformOrigin: modalOrigin }">
@@ -133,14 +140,17 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 
       <!-- 设置列表：独立滚动 -->
       <div class="sm-scroll" ref="smScrollRef" @scroll="onScrollNav">
-      <!-- 收起个性化：展开态置顶，随时可收起 -->
-      <Transition name="pg">
-        <button v-if="showPersonalized && !ui.searchFilter" class="personalize-btn" @click.stop="togglePersonalized">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
-          收起个性化
-        </button>
-      </Transition>
-      <!-- 分组渲染，按搜索过滤（展开 / 收起带过渡）；行渲染在 SettingsRows -->
+      <!-- 常用设置：星标收藏的行（按收藏顺序） -->
+      <div v-if="pinnedRows.length && !ui.searchFilter" class="set-group" data-group="常用设置">
+        <div class="set-label set-label-bar">
+          <span>常用设置</span>
+          <button type="button" class="pin-clear" :class="{ armed: pinClearArmed }" @click.stop="onClearPinned">
+            {{ pinClearArmed ? '确认清空？' : '清空' }}
+          </button>
+        </div>
+        <SettingsRows :rows="pinnedRows" @layout-edit="openLayoutEditor" @layout-reset="askResetLayout" @open-preset-panel="openPresetPanel" />
+      </div>
+      <!-- 分组渲染，按搜索过滤；行渲染在 SettingsRows -->
       <TransitionGroup name="pg" tag="div">
         <div v-for="g in visibleRows" :key="g.label" class="set-group" :data-group="g.label" :class="{ 'set-group-first': g === visibleRows[0] }">
           <div class="set-label">{{ g.label }}</div>
@@ -152,14 +162,6 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
       <div v-if="visibleRows.length === 0" class="set-empty">
         未找到匹配的设置项
       </div>
-
-      <!-- 展开个性化：列表末尾内联入口 -->
-      <Transition name="pg">
-        <button v-if="!showPersonalized && !ui.searchFilter" class="personalize-btn" @click.stop="togglePersonalized">
-          个性化设置
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-      </Transition>
 
       <!-- 重置所有设置 -->
       <div class="set-group" style="margin-top:1.5rem;padding-top:1.3rem;border-top:1px solid var(--glass-border);">
@@ -203,16 +205,12 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('settings')
 .set-search input::placeholder{color:var(--text-faint);}
 .set-search-clear{flex:none;color:var(--text-faint);width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
 .set-search-clear:hover{background:var(--glass-strong);color:var(--text);}
-/* 个性化展开 / 收起入口：内联在列表里，虚线弱化，hover 主题色 */
-.personalize-btn{
-  width:100%;display:flex;align-items:center;justify-content:center;gap:.4rem;
-  margin-top:.9rem;padding:.62rem;border-radius:11px;font-size:.86rem;color:var(--accent-text);
-  background:var(--glass-soft);border:1px dashed var(--glass-border);
-  transition:background .2s,color .2s,border-color .2s;
-}
-.personalize-btn:hover{background:rgba(var(--accent-rgb),.12);border-color:rgba(var(--accent-rgb),.5);color:var(--accent);}
-.personalize-btn svg{opacity:.75;}
-/* 个性化展开 / 收起过渡：分组与按钮淡入淡出 + 上下位移 + 重排平滑 */
+/* 常用设置标题栏：右侧清空按钮，按钮自身二次确认 */
+.set-label-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.pin-clear{flex:none;letter-spacing:0;font-size:.72rem;color:var(--text-faint);padding:.18rem .5rem;border-radius:7px;border:1px solid var(--glass-border);background:transparent;transition:color .2s,background .2s,border-color .2s;}
+.pin-clear:hover{color:var(--accent-text);border-color:var(--accent);background:rgba(var(--accent-rgb),.1);}
+.pin-clear.armed{color:#fff;background:#e5484d;border-color:#e5484d;}
+/* 搜索过滤时分组增删的过渡 */
 .pg-enter-active,.pg-leave-active{transition:opacity .28s var(--ease),transform .28s var(--ease);}
 .pg-enter-from{opacity:0;transform:translateY(-10px);}
 .pg-leave-to{opacity:0;transform:translateY(6px);}

@@ -188,6 +188,7 @@ export function applySaved(saved) {
     dockOpacity: saved.dockOpacity ?? state.dockOpacity,
     dockHoverLift: saved.dockHoverLift ?? state.dockHoverLift,
     dockName: saved.dockName ?? state.dockName,
+    pinnedSettings: saved.pinnedSettings ?? state.pinnedSettings,
     links: saved.links ?? state.links,
     folders: saved.folders ?? state.folders,
     customPresets: saved.customPresets ?? state.customPresets
@@ -219,6 +220,7 @@ function buildSnapshot() {
     wallpaperVignette: state.wallpaperVignette, searchOpacity: state.searchOpacity, searchAnim: state.searchAnim, searchSwap: state.searchSwap, dockOpacity: state.dockOpacity,
     dockHoverLift: state.dockHoverLift,
     dockName: state.dockName,
+    pinnedSettings: state.pinnedSettings,
     links: state.links, folders: state.folders, customPresets: state.customPresets
   }
 }

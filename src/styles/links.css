@@ -1,8 +1,9 @@
 /* ============ 快捷链接页 ============ */
 #linksSection{width:100%;max-width:1180px;margin:0 auto;padding:0 4vw;display:flex;flex-direction:column;align-items:center;}
 @keyframes zoomIn{from{opacity:0;transform:scale(.94);}to{opacity:1;transform:scale(1);}}
-/* 视图进入动画：链接页上浮淡入 */
-@keyframes viewUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+/* 视图进入动画：链接页整体不做动画（整体淡入模式直接静态出现，
+   落位模式的动画由磁贴级 tileDrop 承担；也不做 opacity，
+   避免透明度动画期间 Chromium 降采样/延迟 backdrop-filter） */
 /* 主页仅位移上浮、不动 opacity：backdrop-filter 元素在祖先 opacity 动画期间会被降采样/延迟，
    若主页做 opacity 淡入，搜索框会先显示"透明栏"再加载毛玻璃材质，故主页进入只做位移 */
 @keyframes viewRise{from{transform:translateY(18px);}to{transform:translateY(0);}}
@@ -13,11 +14,9 @@
   opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity .12s ease, visibility 0s linear .12s;
 }
-#linksSection.view-enter{animation:viewUp .4s var(--ease) .15s backwards;}
 #homeSection.view-enter{animation:viewRise .5s var(--ease);}
 /* ============ 磁贴入场动画（设置 → 磁贴入场动画：整体淡入 / 依次落位） ============ */
-/* 落位模式：链接页整体不上浮，磁贴按顺序从上方下落轻弹（一次性入场） */
-html[data-tile-enter="drop"] #linksSection.view-enter{animation:none;}
+/* 落位模式：磁贴按顺序从上方下落轻弹（一次性入场）；整体淡入模式保持静止 */
 /* 用 backwards 而非 both：.view-enter 类常驻，both 会持续保持动画末帧的 transform，
    覆盖磁贴 hover 上浮导致悬浮动效失效；backwards 动画结束后 transform 恢复正常 */
 html[data-tile-enter="drop"] #linksSection.view-enter .link-area .tile{animation:tileDrop .5s var(--ease) backwards;}
@@ -33,30 +32,40 @@ html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(9){animati
 html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(10){animation-delay:.54s;}
 html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(11){animation-delay:.60s;}
 html[data-tile-enter="drop"] #linksSection.view-enter .tile:nth-child(12){animation-delay:.66s;}
+/* 不做 opacity：磁贴从第一帧就完整可见（含毛玻璃），只有落位位移与轻弹缩放。
+   首尾帧都带 translateZ(0)：与 .tile 基础 transform 保持同一合成状态，
+   避免动画结束降级图层时内部图标出现亚像素级的右下偏移 */
 @keyframes tileDrop{
-  from{opacity:0;transform:translateY(-18px) scale(.94);}
-  60%{opacity:1;transform:translateY(4px) scale(1.01);}
-  to{opacity:1;transform:translateY(0) scale(1);}
+  from{transform:translateY(-18px) scale(.94) translateZ(0);}
+  60%{transform:translateY(4px) scale(1.01) translateZ(0);}
+  to{transform:translateZ(0);}
 }
-/* 磁贴收起（离开链接页，落位模式）：依次向上浮起淡出，镜像落位，避免关闭生硬 */
-body.links-leaving #linksSection .link-area .tile{animation:tileRise .26s var(--ease) both;}
+/* 整体淡入模式：磁贴不做整块 opacity（透明度动画会拖累 backdrop-filter 降采样），
+   改为背板染色淡入 + 内容淡入——毛玻璃首帧即就绪，图标与文字柔和浮现，磁贴本身不位移 */
+html[data-tile-enter="fade"] #linksSection.view-enter .link-area .tile{animation:tilePlateIn .34s var(--ease) backwards;}
+html[data-tile-enter="fade"] #linksSection.view-enter .link-area .tile>*{animation:tileContentIn .52s var(--ease) backwards;}
+@keyframes tilePlateIn{from{background-color:transparent;}}
+@keyframes tileContentIn{from{opacity:0;}}
+/* 磁贴收起（离开链接页）：与落位严格镜像——先轻压蓄力，再沿来路向上收回并淡出。
+   依次启动、间距比入场更密（0.025s），整体收干净约 0.58s，与 interactions.js 的等待一致 */
+body.links-leaving #linksSection .link-area .tile{animation:tileRise .3s var(--ease) both;}
 /* nth-child 须带 #linksSection：否则特异性 (0,3,1) 低于主动画 (1,3,1)，delay 被 animation 简写覆盖 */
 body.links-leaving #linksSection .tile:nth-child(1){animation-delay:0s;}
-body.links-leaving #linksSection .tile:nth-child(2){animation-delay:.03s;}
-body.links-leaving #linksSection .tile:nth-child(3){animation-delay:.06s;}
-body.links-leaving #linksSection .tile:nth-child(4){animation-delay:.09s;}
-body.links-leaving #linksSection .tile:nth-child(5){animation-delay:.12s;}
-body.links-leaving #linksSection .tile:nth-child(6){animation-delay:.15s;}
-body.links-leaving #linksSection .tile:nth-child(7){animation-delay:.18s;}
-body.links-leaving #linksSection .tile:nth-child(8){animation-delay:.21s;}
-body.links-leaving #linksSection .tile:nth-child(9){animation-delay:.24s;}
-body.links-leaving #linksSection .tile:nth-child(10){animation-delay:.27s;}
-body.links-leaving #linksSection .tile:nth-child(11){animation-delay:.30s;}
-body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.33s;}
+body.links-leaving #linksSection .tile:nth-child(2){animation-delay:.025s;}
+body.links-leaving #linksSection .tile:nth-child(3){animation-delay:.05s;}
+body.links-leaving #linksSection .tile:nth-child(4){animation-delay:.075s;}
+body.links-leaving #linksSection .tile:nth-child(5){animation-delay:.1s;}
+body.links-leaving #linksSection .tile:nth-child(6){animation-delay:.125s;}
+body.links-leaving #linksSection .tile:nth-child(7){animation-delay:.15s;}
+body.links-leaving #linksSection .tile:nth-child(8){animation-delay:.175s;}
+body.links-leaving #linksSection .tile:nth-child(9){animation-delay:.2s;}
+body.links-leaving #linksSection .tile:nth-child(10){animation-delay:.225s;}
+body.links-leaving #linksSection .tile:nth-child(11){animation-delay:.25s;}
+body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.275s;}
 @keyframes tileRise{
   from{opacity:1;transform:translateY(0) scale(1);}
-  60%{opacity:1;transform:translateY(5px) scale(1.01);}
-  to{opacity:0;transform:translateY(-20px) scale(.94);}
+  60%{opacity:1;transform:translateY(4px) scale(1.01);}
+  to{opacity:0;transform:translateY(-18px) scale(.94);}
 }
 /* 磁贴进入动画（TransitionGroup enter）：淡入 + 放大——与 leave 的缩小消失形成缩放衔接 */
 .tile-enter-active{transition:opacity .3s var(--ease),transform .3s var(--ease);}
@@ -194,3 +203,25 @@ body.glass-shine .dock{box-shadow:0 14px 40px rgba(0,0,0,.3), inset 0 1px 0 var(
 body.glass-shine .search-bar{box-shadow:0 12px 38px rgba(0,30,34,.26), inset 0 1px 0 var(--glass-topline);}
 body.glass-shine .search-bar:focus-within{box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28),0 16px 48px rgba(0,30,34,.32), inset 0 1px 0 var(--glass-topline);}
 body.glass-shine .modal{box-shadow:0 24px 70px rgba(0,0,0,.4), inset 0 1px 0 var(--glass-topline);}
+
+/* 亮色：磁贴背景稍微压暗——叠加一层极淡深色，保持磨砂质感；
+   hover 用同样的叠加配 --glass-strong，避免悬停时跳变 */
+[data-theme="light"] .tile:not(.add){background:linear-gradient(rgba(18,36,40,.045),rgba(18,36,40,.045)),var(--glass);}
+[data-theme="light"] .tile:not(.add):hover{background:linear-gradient(rgba(18,36,40,.045),rgba(18,36,40,.045)),var(--glass-strong);}
+
+/* ============ 链接页垂直居中（毛玻璃默认风格） ============ */
+/* 两页显式占同一网格单元并占满视口，磁贴群在页面垂直居中。
+   否则 #linksSection 只占网格第二行，且 .link-area 从 30vh/57vh 起排，
+   页面元素设「中部」时整块磁贴会偏低。选择器带 body 压过 body.clock-pos-* 的定位规则 */
+html[data-style="glass"] #homeSection,
+html[data-style="glass"] #linksSection{grid-area:1/1;}
+html[data-style="glass"] #linksSection{justify-content:center;}
+/* 磁贴区自身撑满视口高度并用 align-content 居中：不依赖父级高度，
+   避免 #linksSection 高度不足时内容贴顶 */
+html[data-style="glass"] body .link-area{
+  margin:0 auto;
+  min-height:calc(100vh - 120px);
+  max-height:calc(100vh - 120px);
+  align-content:center;
+  padding-top:12px;padding-bottom:12px;
+}

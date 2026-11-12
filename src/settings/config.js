@@ -90,8 +90,11 @@ export const keywordMatch = (row, q) => {
   const text = (row.title + row.desc + row.keywords.join(' ')).toLowerCase()
   return q.split(/\s+/).every(k => text.includes(k))
 }
-/* 常用项 = 外观 / 颜色 / 布局 / 磁贴名称；其余样式 / 行为设置归入「个性化」，点按钮展开 */
-export const BASIC_ROWS = new Set(['presets', 'theme', 'style', 'accentColor', 'clockColor', 'dateColor', 'autoColor', 'pos', 'searchPos', 'dockPos', 'layout', 'hour', 'density', 'iconSize', 'tileText'])
+/* 全部设置行与 id 映射：供「常用设置」栏按收藏 id 取回行配置 */
+export const ALL_ROWS = GROUPS.flatMap(g => g.rows)
+export const ROWS_BY_ID = Object.fromEntries(ALL_ROWS.map(r => [r.id, r]))
+/* 不提供收藏星标的设置项：页面布局（需弹窗实例）与外观预设（整块面板） */
+export const UNPINNABLE_ROWS = new Set(['layout', 'presets'])
 
 /* ---- 分段 / 下拉选项 ---- */
 export const hourOptions = [['12', '12 小时'], ['24', '24 小时']]
@@ -123,4 +126,4 @@ export const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate
 export const FIXED_ROWS = ['glass', 'glassShine', 'radius', 'searchOpacity', 'searchRadius', 'dockOpacity', 'iconGlow', 'tileHover']
 
 /* 主题色：单一主色，按钮/图标/文字由 store 自动派生 */
-export const ACCENT_PRESETS = ['#39C5BB', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#22C55E', '#EF4444', '#64748B']
+export const ACCENT_PRESETS = ['#FF8A3D', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#22C55E', '#EF4444', '#64748B']

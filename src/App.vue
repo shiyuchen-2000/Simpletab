@@ -204,6 +204,9 @@ onBeforeUnmount(() => {
     <div class="bg-tint"></div>
   </div>
 
+  <!-- 链接页整页液态玻璃层：采样壁纸、做模糊与边缘折射，覆盖在背景之上、内容之下 -->
+  <div class="links-glass" id="linksGlass" aria-hidden="true"></div>
+
   <!-- 时钟：两页统一固定定位 -->
   <div id="clockWrap" :data-pos="state.clockPos" @click="onClockClick">
     <ClockView />

@@ -1,19 +1,26 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './styles/main.css'
-import { loadState, loadFonts, applySaved, restoreFromSync, state } from './store'
+import { loadState, loadFonts, applySaved, restoreFromSync, state, applyLayoutVars } from './store'
 import { loadFaviconCache, warmFaviconCache } from './store/faviconCache'
+import { initLiquidGlass } from './liquid'
 
 async function bootstrap() {
   // 并行读取：状态 + favicon 缓存。缓存命中时首帧即显示本地图标，无"字母→图标"闪烁
   const [saved] = await Promise.all([loadState(), loadFaviconCache()])
   if (saved) {
     applySaved(saved)
+    /* 挂载前同步写一次布局变量：watchEffect 默认异步刷新，
+       否则首帧会用默认坐标渲染，搜索框先出现在拓展坞位置再跳回 */
+    applyLayoutVars()
   } else {
     // 本地数据为空（例如 Edge 清缓存清了扩展存储）：稍等账号云同步重新拉取后自动恢复，成功后顺手预热图标
     setTimeout(() => { restoreFromSync().then(ok => { if (ok) warmFaviconCache(state.links) }) }, 1500)
   }
   createApp(App).mount('#app')
+  // 液态玻璃折射：挂载后空闲启动，不阻塞首屏
+  if ('requestIdleCallback' in window) requestIdleCallback(() => initLiquidGlass(), { timeout: 1200 })
+  else setTimeout(initLiquidGlass, 120)
   /* 标签页 favicon 兜底：Edge/Chromium 对 newtab 覆盖页的静态 favicon 有时不刷新到标签栏，
      页面加载后动态重设 favicon link 可触发浏览器重新抓取并更新标签图标 */
   setTimeout(ensureTabFavicon, 0)

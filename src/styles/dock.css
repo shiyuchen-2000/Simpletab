@@ -13,12 +13,7 @@
   /* 用淡入动画：避免 transform 动画覆盖 translateX(-50%) 导致不居中 */
   animation:fadeOnly .5s ease both;
 }
-/* 鼠标进入拓展坞：容器浮起按设置总幅度（--dock-hover-lift）的 40% 分摊，
-   剩余 60% 由图标相对容器浮起（见 DockBar --dock-lift），两者叠加即总幅度且不裁切。
-   设置 0 时容器不浮起、图标不浮起不放大（缩放由图标等比逻辑负责） */
-.dock:hover{transform:translate(-50%,-50%) translateY(calc(var(--dock-hover-lift,6px) * -0.4));}
-/* 无界：拓展坞无背景卡片，容器整体浮起会变成图标凭空位移，故禁用容器变形，仅保留图标联动 */
-[data-style="borderless"] .dock:hover{transform:translate(-50%,-50%);}
+/* hover 保持静止：背景与图标均不位移、不放大（仅图标保留轻微提亮） */
 /* 仅在主页(搜索页)显示，且至少 1 个图标 */
 .dock{display:none;}
 body.links-open .dock{display:none;}

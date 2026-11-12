@@ -1,0 +1,132 @@
+/* ============================================================
+   液态玻璃材质 —— 仅毛玻璃风格（[data-style="glass"]）
+   来源：Glasswork (https://github.com/kubai087/glasswork, MIT)
+   搜索框 / 拓展坞：低模糊 + 饱和度/亮度补偿 + 边缘折射（backdrop-filter）；
+   链接页整体背景：直接改 .bg 壁纸层的材质滤镜（filter）。
+   不改布局、圆角、背景色、阴影，Fluent / 无界风格完全不受影响。
+   边缘折射由 src/liquid/lens.js 写入 --glass-lens（仅 Chromium 生效）。
+   ============================================================ */
+
+/* 材质参数：浅色玻璃提亮、深色玻璃压暗，数字含义同 Glasswork */
+html[data-style="glass"] .dock,
+html[data-style="glass"] .search-bar,
+html[data-style="glass"] .bg,
+html[data-style="glass"] .links-glass,
+html[data-style="glass"] .dropdown {
+  --liquid-blur: 2px;
+  --liquid-sat: 1.8;
+  --liquid-bri: 1.06;
+  --liquid-filter: blur(var(--liquid-blur)) saturate(var(--liquid-sat)) brightness(var(--liquid-bri));
+}
+html[data-style="glass"][data-theme="dark"] .dock,
+html[data-style="glass"][data-theme="dark"] .search-bar,
+html[data-style="glass"][data-theme="dark"] .bg,
+html[data-style="glass"][data-theme="dark"] .links-glass,
+html[data-style="glass"][data-theme="dark"] .dropdown {
+  --liquid-sat: 1.6;
+  --liquid-bri: 0.8;
+}
+
+/* 拓展坞：毛玻璃直接作用于元素 */
+html[data-style="glass"] .dock {
+  backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+  -webkit-backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+}
+
+/* 搜索框：毛玻璃在静态伪元素上，--glass-lens 由宿主继承 */
+html[data-style="glass"] .search-bar::before {
+  backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+  -webkit-backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+}
+
+/* 设置下拉列表（齿轮菜单）：液态玻璃 + 边缘透镜。
+   原 --glass-strong（约 72% 白）会把折射盖住，这里换成薄着色，
+   让边缘弯折的背景真正透出来 */
+html[data-style="glass"] .dropdown {
+  background: rgba(255, 255, 255, .26);
+  backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+  -webkit-backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+}
+html[data-style="glass"][data-theme="dark"] .dropdown {
+  background: rgba(10, 18, 24, .32);
+}
+
+/* 链接页背景不再直接模糊：模糊、提亮与边缘折射都交给上方的 .links-glass 玻璃层，
+   壁纸保持原样作为采样源（原规则的 scale(1.06) 保留） */
+html[data-style="glass"] body.links-open .bg {
+  filter: none;
+}
+
+/* 链接页整页玻璃层：覆盖全屏、采样下方壁纸。
+   inset:0 意味着折射发生在屏幕四边——像隔着一整块厚玻璃看壁纸。
+   z-index:0 且 DOM 在 .bg 之后：位于壁纸之上、磁贴等内容之下，不拦截点击 */
+html[data-style="glass"] .links-glass {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  /* 玻璃表面：薄底色 + 左上主反光 + 右上弱反光 + 底部微光，模拟一块厚玻璃的反射 */
+  background:
+    radial-gradient(120% 90% at 18% -5%, rgba(255, 255, 255, .20), transparent 45%),
+    radial-gradient(70% 50% at 88% 0%, rgba(255, 255, 255, .10), transparent 40%),
+    radial-gradient(45% 32% at 72% 88%, rgba(255, 255, 255, .06), transparent 60%),
+    rgba(255, 255, 255, .05);
+  /* 厚度感：顶部亮线 + 细描边 + 顶部内侧柔光（像玻璃内表面） */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .35),
+    inset 0 0 0 1px rgba(255, 255, 255, .12),
+    inset 0 48px 90px -48px rgba(255, 255, 255, .20);
+  transition: opacity .7s var(--ease), visibility 0s linear .7s;
+  backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+  -webkit-backdrop-filter: var(--liquid-filter) var(--glass-lens,);
+}
+html[data-style="glass"][data-theme="dark"] .links-glass {
+  background:
+    radial-gradient(120% 90% at 18% -5%, rgba(255, 255, 255, .09), transparent 45%),
+    radial-gradient(45% 32% at 72% 88%, rgba(255, 255, 255, .04), transparent 60%),
+    rgba(15, 20, 26, .16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .15),
+    inset 0 0 0 1px rgba(255, 255, 255, .06),
+    inset 0 48px 90px -48px rgba(255, 255, 255, .06);
+}
+html[data-style="glass"] body.links-open .links-glass {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .7s var(--ease);
+}
+
+/* 文件夹打开 / 关闭动画期间暂停最贵的两层：
+   - 整页玻璃的 SVG 位移折射（全屏逐帧重采样）
+   - 链接页磁贴的毛玻璃采样
+   遮罩和面板本身仍有模糊，动画期间观感基本不变 */
+body:has(.folder-backdrop.show) .links-glass,
+body:has(.folder-backdrop.closing) .links-glass {
+  backdrop-filter: var(--liquid-filter);
+  -webkit-backdrop-filter: var(--liquid-filter);
+}
+body:has(.folder-backdrop.show) .link-area .tile::before,
+body:has(.folder-backdrop.closing) .link-area .tile::before {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* 系统要求降低透明度：退回实色/普通模糊，不做折射 */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-style="glass"] .dock,
+  html[data-style="glass"] .search-bar::before,
+  html[data-style="glass"] .links-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  /* 退回原来的整页模糊，玻璃层的着色也关掉 */
+  html[data-style="glass"] body.links-open .bg {
+    filter: blur(11px) saturate(130%) brightness(.85);
+  }
+  html[data-style="glass"] .links-glass {
+    background: transparent;
+    box-shadow: none;
+  }
+}

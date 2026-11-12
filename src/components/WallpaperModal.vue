@@ -8,13 +8,11 @@ const fileInput = ref(null)
 const folderInput = ref(null)
 
 const previewStyle = computed(() => {
-  /* 图片壁纸：预览背景；视频壁纸/默认壁纸：极光渐变占位（视频由下方 video 元素实时渲染） */
+  /* 图片壁纸：预览背景；视频壁纸/默认壁纸：占位（视频由下方 video 元素实时渲染） */
   if (state.wallpaper && !isVideoWallpaper.value) return { backgroundImage: `url(${state.wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-  /* 默认壁纸：跟随主题展示极光亮/暗版，与初始页背景一致 */
-  const grad = resolvedTheme.value === 'dark'
-    ? 'radial-gradient(55% 50% at 20% 14%, rgba(56,110,190,.6), transparent 66%),radial-gradient(50% 45% at 82% 18%, rgba(140,72,186,.5), transparent 66%),radial-gradient(65% 55% at 52% 92%, rgba(26,138,160,.55), transparent 66%),radial-gradient(38% 32% at 40% 55%, rgba(210,90,150,.28), transparent 72%),linear-gradient(160deg,#080d1c 0%,#0e1730 55%,#13223c 100%)'
-    : 'radial-gradient(52% 46% at 18% 12%, rgba(255,255,255,.95), transparent 66%),radial-gradient(48% 42% at 84% 18%, rgba(150,214,222,.5), transparent 66%),radial-gradient(55% 50% at 48% 96%, rgba(168,176,236,.4), transparent 66%),radial-gradient(30% 28% at 66% 52%, rgba(244,172,196,.25), transparent 70%),linear-gradient(162deg,#f6f8fc 0%,#e4eef4 45%,#d9e4ef 100%)'
-  return { background: grad, backgroundSize: 'cover', backgroundPosition: 'center' }
+  /* 默认壁纸：跟随主题展示亮/暗两张图片，与初始页背景一致 */
+  const img = resolvedTheme.value === 'dark' ? "url('/wallpaper/dark.jpg')" : "url('/wallpaper/light.jpg')"
+  return { backgroundImage: img, backgroundSize: 'cover', backgroundPosition: 'center' }
 })
 
 function pick() { fileInput.value?.click() }

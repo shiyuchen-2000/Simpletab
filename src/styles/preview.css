@@ -2,7 +2,7 @@
 /* 预览模式隐藏齿轮：不可再打开设置下拉（由返回按钮退出预览） */
 body.preview #gearZone{display:none;}
 .preview-back{
-  position:fixed;top:20px;right:24px;z-index:1500;
+  position:fixed;top:12px;right:26px;z-index:1500;
   display:inline-flex;align-items:center;gap:9px;
   padding:.85rem 1.2rem;border-radius:14px;font-size:.95rem;font-weight:600;
   color:var(--accent-on);background:var(--accent);border:none;cursor:pointer;

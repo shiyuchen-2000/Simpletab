@@ -4,6 +4,24 @@
    ===================================================== */
 /* —— 磁贴：去掉卡片框，仅图标 + 名称 —— */
 [data-style="borderless"] .tile{background:transparent;border-color:transparent;box-shadow:none;}
+/* 无界没有卡片边界，原 16px 上留白会把图标+名称整体推低；
+   压缩上留白并把上下调匀，让内容在网格行里视觉居中 */
+[data-style="borderless"] .link-area .tile,
+[data-style="borderless"] .fp-grid .tile{padding-top:8px;padding-bottom:12px;}
+/* 无界：两页都显式占同一网格单元（1/1）并占满整个视口。
+   若只给 #linksSection 指定，自动放置会把 #homeSection 挤到第二行，
+   主页进入动画的 transform 会让 fixed 搜索框相对它定位、先跳到下方再归位 */
+html[data-style="borderless"] #homeSection,
+html[data-style="borderless"] #linksSection{grid-area:1/1;}
+html[data-style="borderless"] #linksSection{justify-content:center;}
+/* 选择器带 body 以压过 body.clock-pos-* .link-area 的定位规则 */
+html[data-style="borderless"] body .link-area{
+  margin:0 auto;
+  min-height:calc(100vh - 120px);
+  max-height:calc(100vh - 120px);
+  align-content:center;
+  padding-top:12px;padding-bottom:12px;
+}
 [data-style="borderless"] .tile::before{backdrop-filter:none;-webkit-backdrop-filter:none;opacity:1;animation:none;}
 [data-style="borderless"] .tile:hover{background:transparent;transform:translateY(var(--tile-hover-lift,-5px)) translateZ(0);}
 [data-style="borderless"] .tile:active{background:transparent;}

@@ -7,13 +7,23 @@ import { state, save, toast, resolvedTheme, autoFitClockColors } from '../../sto
 import {
   hourOptions, posOptions, themeOptions, styleOptions, dateOptions, dockCountOptions,
   shapeOptions, tileTextOptions, searchAnimOptions, tileEnterOptions, folderAnimOptions,
-  densityOptions, openInOptions, toggleField, FIXED_ROWS, ACCENT_PRESETS
+  densityOptions, openInOptions, toggleField, FIXED_ROWS, ACCENT_PRESETS, UNPINNABLE_ROWS
 } from '../../settings/config'
 import PresetBox from './PresetBox.vue'
 import FontRow from './FontRow.vue'
 
 const props = defineProps({ rows: { type: Array, required: true } })
 defineEmits(['layout-edit', 'layout-reset', 'open-preset-panel'])
+
+/* 常用设置：星标收藏到 state.pinnedSettings（按点击顺序），再点取消 */
+const isPinned = id => (state.pinnedSettings || []).includes(id)
+function togglePin(id) {
+  const list = state.pinnedSettings || (state.pinnedSettings = [])
+  const i = list.indexOf(id)
+  if (i >= 0) list.splice(i, 1)
+  else list.push(id)
+  save()
+}
 
 /* 材质类设置项置灰：Fluent 全部固定；无界仅去卡片化相关项固定，搜索框透明度/圆角仍可调 */
 const rowFixed = r => {
@@ -26,7 +36,7 @@ const clockColorVal = computed(() => state.clockColor || (resolvedTheme.value ==
 const dateColorVal = computed(() => state.dateColor || (resolvedTheme.value === 'dark' ? '#e9fbf9' : '#0d2b2e'))
 
 /* 主题色：单一主色，按钮/图标/文字由 store 自动派生 */
-const accentColorVal = computed(() => state.accentColor || '#39C5BB')
+const accentColorVal = computed(() => state.accentColor || '#FF8A3D')
 function setAccentColor(c) {
   /* 选中默认青色 → 置 null，回落到 CSS 内置默认（保持出厂观感一致） */
   state.accentColor = String(c).toLowerCase() === '#39c5bb' ? null : c
@@ -89,7 +99,13 @@ function toggle(field) {
 </script>
 
 <template>
-  <template v-for="r in props.rows" :key="r.id">
+  <div v-for="r in props.rows" :key="r.id" class="set-row-wrap">
+    <!-- 星标：收藏 / 取消常用设置 -->
+    <button v-if="!UNPINNABLE_ROWS.has(r.id)" class="pin-btn" :class="{ on: isPinned(r.id) }" @click.stop.prevent="togglePin(r.id)"
+            :title="isPinned(r.id) ? '取消常用' : '加入常用'"
+            :aria-label="isPinned(r.id) ? '取消常用' : '加入常用'" :aria-pressed="isPinned(r.id)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z"/></svg>
+    </button>
     <!-- 外观预设：一键应用整套外观 -->
     <PresetBox v-if="r.id === 'presets'" @open-panel="$emit('open-preset-panel')" />
     <!-- 时钟：时间格式 -->
@@ -303,7 +319,7 @@ function toggle(field) {
         <button v-for="[v, label] in folderAnimOptions" :key="v" :class="{ on: state.folderAnim === v }" @click="setFolderAnim(v)">{{ label }}</button>
       </div>
     </div>
-  </template>
+  </div>
 </template>
 
 <style scoped>
@@ -324,4 +340,11 @@ function toggle(field) {
 /* Fluent 风格下材质类设置固定：置灰不可交互 */
 .set-row.fixed{opacity:.5;}
 .set-row.fixed input[type="range"],.set-row.fixed input[type="color"],.set-row.fixed .switch,.set-row.fixed .btn-mini{cursor:not-allowed;}
+/* 常用设置星标：每行左侧，实心表示已收藏 */
+.set-row-wrap{display:flex;align-items:flex-start;gap:7px;}
+.set-row-wrap > :not(.pin-btn){flex:1;min-width:0;}
+.pin-btn{flex:none;width:22px;height:22px;margin-top:5px;display:grid;place-items:center;border-radius:7px;color:var(--text-faint);transition:color .2s,background .2s;}
+.pin-btn:hover{color:var(--accent-text);background:var(--glass-soft);}
+.pin-btn.on{color:var(--accent);}
+.pin-btn.on svg{fill:currentColor;}
 </style>

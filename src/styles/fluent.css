@@ -110,3 +110,18 @@
 [data-style="fluent"] .seg{border-radius:8px;}
 [data-style="fluent"] .seg button{border-radius:6px;}
 [data-style="fluent"] .seg button.on{background:rgba(var(--accent-rgb),.14);color:var(--accent-text);font-weight:600;box-shadow:none;}
+
+/* —— 链接页居中：两页都显式占同一网格单元（1/1）并占满视口。
+   若只给 #linksSection 指定，自动放置会把 #homeSection 挤到第二行，
+   主页进入动画的 transform 会让 fixed 搜索框相对它定位、先跳到下方再归位 —— */
+html[data-style="fluent"] #homeSection,
+html[data-style="fluent"] #linksSection{grid-area:1/1;}
+html[data-style="fluent"] #linksSection{justify-content:center;}
+/* 选择器带 body 以压过 body.clock-pos-* .link-area 的定位规则 */
+html[data-style="fluent"] body .link-area{
+  margin:0 auto;
+  min-height:calc(100vh - 120px);
+  max-height:calc(100vh - 120px);
+  align-content:center;
+  padding-top:12px;padding-bottom:12px;
+}

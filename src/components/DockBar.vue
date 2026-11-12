@@ -9,8 +9,7 @@ const visible = computed(() => dockVisible())
 const dockClass = computed(() => ({ 'dock-visible': visible.value }))
 
 /* 联动浮起：按图标与鼠标的水平距离衰减，近者浮起多、远者少（macOS 式邻居跟随）。
-   总幅度由设置 state.dockHoverLift 控制（0 关闭）：容器承担 40%（CSS .dock:hover），
-   图标相对容器承担 60% —— 这样图标相对容器的浮起始终 ≤ 0.6×设置，不超过容器 padding 而不被裁切 */
+   只有图标动，背景保持静止：图标最大浮起 0.6×设置，不超过容器 padding，不会被 overflow 裁切 */
 const dockRef = ref(null)
 const RANGE = 100     // 影响半径 px
 function onDockMove(e) {

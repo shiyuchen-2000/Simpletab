@@ -32,7 +32,7 @@ export function setView(v) {
       state.view = 'home'
       ui.homeLeaving = false
       save()
-    }, 560)
+    }, 620)
     return
   }
   state.view = v

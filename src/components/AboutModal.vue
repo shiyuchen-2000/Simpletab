@@ -6,6 +6,15 @@ import { useGearModal } from '../store/useGearModal'
 /* 更新日志：新版本在上。items 为 { t, tag }，tag: 'new' 新增（绿）/ 'fix' 修复（黄），缺省无标签 */
 const CHANGES = [
   {
+    ver: 'v1.7.6',
+    items: [
+      { t: '全新液态玻璃视觉，默认壁纸换新', tag: 'new' },
+      { t: '设置项目增加星标置顶，免去翻找更方便', tag: 'new' },
+      { t: '优化设置页面逻辑' },
+      { t: '修复了一些已知问题', tag: 'fix' }
+    ]
+  },
+  {
     ver: 'v1.7.5',
     items: [
       { t: '新增文件夹切换分页：滚轮 / 箭头 / 分页点 3D 滚筒切换，两侧磨砂预览，快速切换不卡顿', tag: 'new' },

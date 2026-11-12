@@ -4,7 +4,7 @@
   background:var(--bg-default);
   background-size:cover;background-position:center;
   /* 自定义壁纸（尤其透明 PNG / 未加载完成）时兜底，避免透出 body 的默认壁纸渐变 */
-  background-color:#101826;
+  background-color:var(--bg-fallback,#101826);
   background-repeat:no-repeat;
   transform-origin:center;
   transition:filter .7s var(--ease), transform .7s var(--ease);

@@ -4,7 +4,7 @@
 // 副作用（模块加载即注册）：系统深浅色监听 + 多个 watchEffect 写 dataset/CSS 变量
 // ============================================================
 import { ref, computed, watchEffect } from 'vue'
-import { state } from './state'
+import { state, ui } from './state'
 
 /* ---------- 主题 / 位置预设：应用到 body/html（驱动全局 CSS 类） ---------- */
 const darkMq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -35,7 +35,7 @@ watchEffect(() => {
 /* ---------- 主题色：单一主色 → 自动派生全套（按钮/文字/图标/hover 联动） ---------- */
 function hexToRgb(hex) {
   let h = String(hex || '').replace('#', '')
-  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(h)) return [57, 197, 187]
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(h)) return [255, 138, 61]
   if (h.length === 3) h = h.split('').map(c => c + c).join('')
   const n = parseInt(h, 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
@@ -89,9 +89,13 @@ watchEffect(() => {
   el.style.setProperty('--accent-grad-b', `rgba(${dr},${dg},${db},.95)`)
 })
 
-/* 外观 body 类：磁贴名称显示模式 / 悬浮动效关闭 / 玻璃高光 / 壁纸暗角 */
+/* 外观 body 类：磁贴名称显示模式 / 悬浮动效关闭 / 玻璃高光 / 壁纸暗角 / 实时预览 */
 watchEffect(() => {
   document.body.classList.toggle('vignette-on', !!state.wallpaperVignette)
+})
+/* 实时预览：隐藏设置齿轮（CSS body.preview #gearZone），由「返回设置」退出 */
+watchEffect(() => {
+  document.body.classList.toggle('preview', !!ui.preview)
 })
 watchEffect(() => {
   document.body.classList.toggle('tile-text-hover', state.tileText === 'hover')

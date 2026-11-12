@@ -3,7 +3,8 @@
   position:relative;width:100%;height:100%;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   padding:0 6vw;
-  animation:viewRise .5s var(--ease);   /* 不用 both：结束后脱离 transform 合成层，避免层内文本条纹伪影 */
+  /* 入场动画只由 .view-enter 触发（links.css）。不要写在这里：元素一渲染就播，
+     动画的 transform 会让内部 fixed 搜索框改以本元素为包含块定位，刷新时先偏下再归位 */
   transition:justify-content .6s var(--ease),align-items .6s var(--ease),padding .6s var(--ease);
 }
 /* 退出到链接页的淡出由 #homeSection.hidden 的 opacity 过渡负责，home-leaving 类仅保留标记 */
