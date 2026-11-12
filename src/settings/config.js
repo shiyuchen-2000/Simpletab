@@ -71,7 +71,8 @@ export const GROUPS = [
       { id: 'searchOpacity', title: '搜索框透明度', desc: '调节搜索框背景的透明程度', keywords: ['搜索框透明度', '搜索框', '透明度', 'search', 'opacity'] },
       { id: 'searchRadius', title: '搜索框圆角', desc: '胶囊(29px)到方形(10px)之间调节，实时预览', keywords: ['搜索框圆角', '搜索框', '圆角', 'radius', '胶囊', '方形'] },
       { id: 'searchAnim', title: '搜索框动画', desc: '聚焦时的 3D 动效：无 / 沉入 / 浮升', keywords: ['搜索框动画', '动画', '3D', '沉入', '浮升', '动效', '效果', 'search', 'anim'] },
-      { id: 'searchSwap', title: '交换位置', desc: '交换搜索引擎与搜索图标的位置', keywords: ['交换位置', '搜索引擎', '图标', '位置', 'swap', 'search'] }
+      { id: 'searchSwap', title: '交换位置', desc: '交换搜索引擎与搜索图标的位置', keywords: ['交换位置', '搜索引擎', '图标', '位置', 'swap', 'search'] },
+      { id: 'searchSuggest', title: '链接联想', desc: '输入链接标题时在搜索框下方联想，方向键选择、回车打开', keywords: ['链接联想', '联想', '搜索', '标题', '建议', 'suggest', 'link'] }
     ]
   },
   {
@@ -119,7 +120,7 @@ export const densityOptions = [['compact', '紧凑'], ['comfort', '舒适'], ['s
 export const openInOptions = [['new', '新标签页'], ['self', '当前页']]
 
 /* 开关行字段映射（state 里的布尔字段名） */
-export const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor', searchSwap: 'searchSwap', dockName: 'dockName' }
+export const toggleField = { sec: 'showSeconds', blink: 'blink', date: 'showDate', dock: 'dockEnabled', vignette: 'wallpaperVignette', glassShine: 'glassShine', autoColor: 'autoColor', searchSwap: 'searchSwap', searchSuggest: 'searchSuggest', dockName: 'dockName' }
 /* 材质类设置项：在 Fluent / 无界下按需置灰。
    Fluent：全部固定为 Fluent 规范值（CSS [data-style="fluent"] 覆盖）；置灰不可调。
    无界：仅去卡片化相关项固定；搜索框保持玻璃背景，其透明度 / 圆角仍可调 */

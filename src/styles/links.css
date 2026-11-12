@@ -85,7 +85,7 @@ body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.275s;}
   /* 顶部预留悬浮上浮空间：overflow 滚动容器会裁切第一行磁贴 hover 上浮超出部分，
      padding-top 随悬浮强度（--tile-hover-lift 为负值）动态增大，保证上浮不被裁边 */
   padding:calc(6px + var(--tile-hover-lift,-5px) * -1) 2px 40px;
-  transition:margin-top .5s var(--ease),max-height .5s var(--ease);
+  transition:margin-top .5s var(--ease),max-height .5s var(--ease),opacity .07s ease;
   scrollbar-width:thin;scrollbar-color:var(--glass-border) transparent;
 }
 body.clock-pos-mid .link-area{margin-top:57vh;max-height:calc(100vh - 60vh);}
@@ -146,14 +146,15 @@ body.tile-text-hover .link-area .tile:hover .t-name,body.tile-text-hover .fp-gri
 body.tile-text-hover .link-area .tile:hover .t-ico,body.tile-text-hover .link-area .tile:hover .f-grid,body.tile-text-hover .fp-grid .tile:hover .t-ico{transform:translateY(-9px);}
 body.tile-text-none .link-area .tile .t-name,body.tile-text-none .fp-grid .tile .t-name{display:none;}
 body.tile-text-none .link-area .tile:not(.add),body.tile-text-none .fp-grid .tile:not(.add){justify-content:center;min-height:var(--tile-h,106px);}
-.tile.add{background:rgba(255,255,255,.14);justify-content:center;box-shadow:none;min-height:var(--tile-h,106px);position:relative;}
+/* 加号磁贴：幽灵态实线框 + 弱文字色，亮/暗主题都可见（暗色面板上不再用黑底黑字） */
+.tile.add{background:transparent;border:1px solid var(--glass-border);justify-content:center;box-shadow:none;min-height:var(--tile-h,106px);position:relative;}
 /* 加号磁贴关闭毛玻璃采样：半透明底无模糊必要，且规避 Chromium backdrop-filter 在部分 GPU 下的竖直条纹伪影 */
 .tile.add::before{backdrop-filter:none;-webkit-backdrop-filter:none;}
-[data-theme="dark"] .tile.add{background:rgba(0,0,0,.14);}
-.tile.add:hover{border-color:var(--accent);transform:translateY(var(--tile-hover-lift,-5px));background:rgba(var(--accent-rgb),.22);}
+[data-theme="dark"] .tile.add{background:transparent;}
+.tile.add:hover{border-color:var(--accent);transform:translateY(var(--tile-hover-lift,-5px));background:rgba(var(--accent-rgb),.16);}
 /* 「+」磁贴：幽灵态十字 —— 亮色模式白色半透明 / 暗色模式灰黑半透明，hover 后变主题色 */
-.tile.add .plus{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);}
-[data-theme="dark"] .tile.add .plus{color:rgba(0,0,0,.4);}
+.tile.add .plus{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-faint);}
+[data-theme="dark"] .tile.add .plus{color:var(--text-faint);}
 .tile.add .plus svg{width:28px;height:28px;transition:transform .28s var(--ease);}
 .tile.add:hover .plus{color:var(--accent);}
 .tile.add:hover .plus svg{transform:scale(1.1);}
@@ -208,6 +209,14 @@ body.glass-shine .modal{box-shadow:0 24px 70px rgba(0,0,0,.4), inset 0 1px 0 var
    hover 用同样的叠加配 --glass-strong，避免悬停时跳变 */
 [data-theme="light"] .tile:not(.add){background:linear-gradient(rgba(18,36,40,.045),rgba(18,36,40,.045)),var(--glass);}
 [data-theme="light"] .tile:not(.add):hover{background:linear-gradient(rgba(18,36,40,.045),rgba(18,36,40,.045)),var(--glass-strong);}
+
+/* 打开文件夹时让整块链接区渐隐（而不是逐块磁贴）：
+   磁贴自身的过渡留给补位 / 删除动画，避免同时抢 opacity 造成抽搐；
+   只影响根级链接区，文件夹内磁贴不受影响 */
+body:has(.folder-backdrop.show) .link-area{
+  opacity:0;pointer-events:none;
+  transition:margin-top .5s var(--ease),max-height .5s var(--ease),opacity .2s ease;
+}
 
 /* ============ 链接页垂直居中（毛玻璃默认风格） ============ */
 /* 两页显式占同一网格单元并占满视口，磁贴群在页面垂直居中。

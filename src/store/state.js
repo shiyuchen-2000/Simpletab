@@ -26,7 +26,7 @@ const DEFAULTS = {
   accentColor: null,
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true, tileEnter: 'drop', folderAnim: 'flip',
-  wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', searchSwap: false, dockOpacity: 0.72, dockHoverLift: 6, dockName: true,
+  wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', searchSwap: false, searchSuggest: true, dockOpacity: 0.72, dockHoverLift: 6, dockName: true,
   pinnedSettings: [],
   links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS, customPresets: []
 }
@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS = {
   accentColor: DEFAULTS.accentColor,
   glassStrength: DEFAULTS.glassStrength, cardRadius: DEFAULTS.cardRadius, tileDensity: DEFAULTS.tileDensity, linkOpenIn: DEFAULTS.linkOpenIn, searchRadius: DEFAULTS.searchRadius,
   iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine, tileEnter: DEFAULTS.tileEnter, folderAnim: DEFAULTS.folderAnim,
-  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, searchSwap: DEFAULTS.searchSwap, dockOpacity: DEFAULTS.dockOpacity, dockHoverLift: DEFAULTS.dockHoverLift, dockName: DEFAULTS.dockName,
+  wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, searchSwap: DEFAULTS.searchSwap, searchSuggest: DEFAULTS.searchSuggest, dockOpacity: DEFAULTS.dockOpacity, dockHoverLift: DEFAULTS.dockHoverLift, dockName: DEFAULTS.dockName,
   pinnedSettings: []
 }
 
@@ -62,6 +62,7 @@ export const ui = reactive({
   modal: null,                 // 'settings' | 'wallpaper' | 'about' | null
   searchQuery: '',
   searchFilter: '',
+  suggestIndex: -1,            // 链接联想当前高亮项（-1 无）
   flip: false,
   linkForm: { visible: false, closing: false, mode: 'add', id: null, url: '', name: '', batch: false, batchText: '', folderSel: '', newFolder: '', err: '', top: 0, left: 0, origin: '50% 50%' },
   ctxMenu: { visible: false, x: 0, y: 0, items: [], linkId: null, folderId: null, inFolder: false },

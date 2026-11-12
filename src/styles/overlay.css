@@ -70,10 +70,10 @@
 .confirm-box .c-actions{display:flex;justify-content:center;gap:.7rem;}
 
 /* 手机式文件夹展开面板 */
-.folder-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:rgba(0,15,18,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);}
+.folder-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:rgba(0,15,18,.4);}
 .folder-backdrop.show{display:flex;animation:fadeIn .28s ease both;}
-.folder-backdrop.closing{display:flex;animation:fadeOut .45s ease both;}
-.folder-panel{width:min(620px,92vw);max-height:84vh;display:flex;flex-direction:column;padding:1.4rem;border-radius:24px;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);box-shadow:0 26px 80px rgba(0,0,0,.45);animation:folderIn .4s var(--ease) both;}
+.folder-backdrop.closing{display:flex;animation:fadeOut .2s ease both;}
+.folder-panel{width:min(620px,92vw);max-height:84vh;display:flex;flex-direction:column;padding:1.4rem;border-radius:24px;background:var(--glass-modal);border:1px solid var(--glass-border);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);box-shadow:0 26px 80px rgba(0,0,0,.45);animation:folderIn .4s var(--ease) both;}
 .folder-backdrop.closing .folder-panel{animation:folderOut .24s var(--ease) both;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes fadeOut{to{opacity:0;}}

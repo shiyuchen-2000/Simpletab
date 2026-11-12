@@ -30,19 +30,17 @@ export function renameFolder(fid, title) {
 
 /* 自动删除空文件夹（无链接归属时），返回是否删除了文件夹 */
 export function pruneEmptyFolders() {
-  let removed = false
-  state.folders.forEach(f => {
-    if (!state.links.some(l => l.folderId === f.id)) {
-      state.folders = state.folders.filter(x => x.id !== f.id)
-      /* 若删除的是当前打开的面板，关闭面板遮罩 */
-      if (ui.folderOpenId === f.id) {
-        ui.folderOpenId = null
-        ui.folderClosing = true
-        clearTimeout(folderCloseTimer)
-        folderCloseTimer = setTimeout(() => { ui.folderClosing = false }, 240)
-      }
-      removed = true
-    }
-  })
-  return removed
+  /* 先收集空文件夹，再一次性替换数组：避免遍历中反复赋值触发多次重排 */
+  const empty = state.folders.filter(f => !state.links.some(l => l.folderId === f.id))
+  if (!empty.length) return false
+  const emptyIds = new Set(empty.map(f => f.id))
+  if (ui.folderOpenId && emptyIds.has(ui.folderOpenId)) {
+    /* 若删除的是当前打开的面板，关闭面板遮罩 */
+    ui.folderOpenId = null
+    ui.folderClosing = true
+    clearTimeout(folderCloseTimer)
+    folderCloseTimer = setTimeout(() => { ui.folderClosing = false }, 240)
+  }
+  state.folders = state.folders.filter(f => !emptyIds.has(f.id))
+  return true
 }

@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { state, ui, setEngine, cycleEngine, doSearch, resolveLayout } from '../store'
+import { state, ui, setEngine, cycleEngine, doSearch, resolveLayout, openLinkUrl } from '../store'
+import { matchLinks } from '../store/searchSuggest'
+import SearchSuggest from './SearchSuggest.vue'
 
 const engineOpen = ref(false)
 const engineClosing = ref(false)
@@ -45,8 +47,56 @@ function onBarLeave(e) {
   noExpand.value = expandOverlaps()
 }
 
+/* ---------- 链接联想 ---------- */
+const suggestions = computed(() => {
+  if (!state.searchSuggest || !ui.searchQuery.trim()) return []
+  return matchLinks(ui.searchQuery, state.links, state.folders, 6)
+})
+const suggestDismissed = ref(false)
+const focused = ref(false)
+let composing = false
+watch(() => ui.searchQuery, () => {
+  ui.suggestIndex = -1
+  suggestDismissed.value = false
+})
+function onCompositionStart() { composing = true }
+function onCompositionEnd() { composing = false }
+
+function pickSuggestion(item) {
+  if (!item) return
+  openLinkUrl(item.link.url)
+  ui.searchQuery = ''
+  ui.suggestIndex = -1
+}
+
 function onKeydown(e) {
-  if (e.key === 'Tab') { e.preventDefault(); closeEngine(); cycleEngine() }
+  if (e.key === 'Tab') { e.preventDefault(); closeEngine(); cycleEngine(); return }
+  if (composing) return
+  const n = suggestions.value.length
+  if (n && !suggestDismissed.value) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      ui.suggestIndex = ui.suggestIndex < 0 ? 0 : (ui.suggestIndex + 1) % n
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      ui.suggestIndex = ui.suggestIndex <= 0 ? n - 1 : ui.suggestIndex - 1
+      return
+    }
+    if (e.key === 'Enter' && ui.suggestIndex >= 0) {
+      e.preventDefault()
+      pickSuggestion(suggestions.value[ui.suggestIndex])
+      return
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      suggestDismissed.value = true
+      ui.suggestIndex = -1
+      return
+    }
+  }
   if (e.key === 'Enter') doSearch()
 }
 /* 引擎下拉：打开/关闭带退出动画 */
@@ -92,7 +142,9 @@ onBeforeUnmount(() => {
       <svg class="si-b" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </span>
     <input type="text" placeholder="搜索一下…" v-model="ui.searchQuery"
-           autocomplete="off" spellcheck="false" @keydown="onKeydown">
+           autocomplete="off" spellcheck="false" @keydown="onKeydown"
+           @focus="focused = true" @blur="focused = false"
+           @compositionstart="onCompositionStart" @compositionend="onCompositionEnd">
     <div class="engine-wrap">
       <button class="engine-pill" :class="pillClass" @click.stop="onPillClick" title="点击选择搜索引擎 · Tab 键循环">
         <span>{{ engineName }}</span>
@@ -108,4 +160,9 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+
+  <!-- 链接联想：搜索框正下方分离面板 -->
+  <SearchSuggest v-if="state.searchSuggest && focused && !suggestDismissed && suggestions.length"
+                 :items="suggestions" :index="ui.suggestIndex"
+                 @select="i => ui.suggestIndex = i" @pick="pickSuggestion" />
 </template>

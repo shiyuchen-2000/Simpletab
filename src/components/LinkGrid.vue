@@ -233,6 +233,16 @@ function snapshotTileRects() {
   })
   return map
 }
+/* 磁贴行数（按 top 聚类，容差 4px）：用于判断是否发生换行/折行 */
+function rowCount(rects) {
+  const tops = [...rects.values()].map(v => v.y).sort((a, b) => a - b)
+  let rows = 0
+  let last = -Infinity
+  for (const t of tops) {
+    if (t - last > 4) { rows += 1; last = t }
+  }
+  return rows
+}
 function observeTileShifts() {
   tileObserver?.disconnect()
   const area = areaRef.value?.$el
@@ -243,22 +253,29 @@ function observeTileShifts() {
       const a = areaRef.value?.$el
       if (!a) return
       const now = new Map()
+      const rects = []
       a.querySelectorAll('.tile:not(.add)').forEach(el => {
         const r = el.getBoundingClientRect()
         const key = el.dataset.id || el.dataset.fid
         if (!key) return
-        const p = prevTileRects.get(key)
-        if (p && (p.x !== r.left || p.y !== r.top)) {
-          el.animate(
-            [
-              { transform: `translate(${p.x - r.left}px, ${p.y - r.top}px)` },
-              { transform: 'translate(0,0)' }
-            ],
-            { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
-          )
-        }
         now.set(key, { x: r.left, y: r.top })
+        rects.push({ el, key, rect: r })
       })
+      /* 行数变化（1 行 ↔ 2 行）时换行无法用位移动画表达，直接重排，避免"抽搐"似的补位动画 */
+      if (rowCount(prevTileRects) === rowCount(now)) {
+        for (const { el, key, rect } of rects) {
+          const p = prevTileRects.get(key)
+          if (p && (p.x !== rect.left || p.y !== rect.top)) {
+            el.animate(
+              [
+                { transform: `translate(${p.x - rect.left}px, ${p.y - rect.top}px)` },
+                { transform: 'translate(0,0)' }
+              ],
+              { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
+            )
+          }
+        }
+      }
       prevTileRects = now
     })
   })

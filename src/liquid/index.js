@@ -15,8 +15,11 @@ const TARGETS = [
   // 设置下拉列表：小面板用整张位移图（fullMap），避免九宫格拼接的接缝竖线；
   // 边宽/偏移加大、衰减放慢、色散加强，让折射在小面板上也足够明显
   { selector: '.dropdown', options: { rim: 72, edge: 2.2, power: 1.3, dispersion: 0.35, fullMap: true } },
-  // 整页玻璃：边缘折射带与色散适中（rim 由 110 降到 80，避免边带过大）
-  { selector: '.links-glass', options: { rim: 80, edge: 1.15, power: 2.2, dispersion: 0.15 } },
+  // 搜索联想面板：动态出现的小面板，整图 + 中等折射
+  { selector: '.suggest-panel', options: { rim: 40, edge: 1.4, power: 2, dispersion: 0.2, fullMap: true } },
+  // 整页玻璃：保持边缘折射，但关闭色散（单通道位移），
+  // 让文件夹等动画期间也能持续保持折射而不掉帧
+  { selector: '.links-glass', options: { rim: 80, edge: 1.15, power: 2.2, dispersion: 0 } },
 ]
 
 const lenses = new Map()   // Element -> liquidGlass 返回的 api

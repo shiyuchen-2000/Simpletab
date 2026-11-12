@@ -153,7 +153,17 @@ function onWheel(e) {
   switchFolder(e.deltaY > 0 ? 1 : -1)
 }
 
+/* 文件夹打开 / 关闭动画期间标记 body：暂停全屏折射与磁贴采样，
+   动画结束后立即恢复，静止打开时背后的液态玻璃仍可见 */
+let folderAnimTimer = null
+function markFolderAnimating(ms) {
+  document.body.classList.add('folder-animating')
+  clearTimeout(folderAnimTimer)
+  folderAnimTimer = setTimeout(() => document.body.classList.remove('folder-animating'), ms)
+}
+
 watch(() => ui.folderOpenId, async (id, prev) => {
+  markFolderAnimating(id ? 850 : 550)
   editing.value = false
   /* 打开时保留当前文件夹：关闭后 folderOpenId 清空，computed 回退到 displayFolder，
      面板才不立即卸载，能完整播放关闭动画（翻转落回磁贴） */

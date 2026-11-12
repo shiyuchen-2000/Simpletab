@@ -98,17 +98,9 @@ html[data-style="glass"] body.links-open .links-glass {
   transition: opacity .7s var(--ease);
 }
 
-/* 文件夹打开 / 关闭动画期间暂停最贵的两层：
-   - 整页玻璃的 SVG 位移折射（全屏逐帧重采样）
-   - 链接页磁贴的毛玻璃采样
-   遮罩和面板本身仍有模糊，动画期间观感基本不变 */
-body:has(.folder-backdrop.show) .links-glass,
-body:has(.folder-backdrop.closing) .links-glass {
-  backdrop-filter: var(--liquid-filter);
-  -webkit-backdrop-filter: var(--liquid-filter);
-}
-body:has(.folder-backdrop.show) .link-area .tile::before,
-body:has(.folder-backdrop.closing) .link-area .tile::before {
+/* 文件夹动画期间：整页折射保持不变（避免"关-开"视觉抽搐），
+   只暂停面板自身的背景模糊来减负（链接页磁贴已整体隐藏） */
+body.folder-animating .folder-panel {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
