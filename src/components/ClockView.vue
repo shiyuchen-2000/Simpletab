@@ -3,10 +3,17 @@ import { computed } from 'vue'
 import { state, clockParts, fontStack } from '../store'
 
 const parts = computed(() => clockParts())
-const timeStyle = computed(() => ({
-  fontFamily: fontStack(state.clockFont),
-  color: state.clockColor || 'var(--clock-text)'
-}))
+const timeStyle = computed(() => {
+  const style = {
+    fontFamily: fontStack(state.clockFont),
+    color: state.clockColor || 'var(--clock-text)'
+  }
+  /* 自定义时间颜色时，光晕跟随同色（40% 透明度），再叠一层深色投影保证可读 */
+  if (state.clockColor) {
+    style.textShadow = `0 0 44px ${state.clockColor}66, 0 2px 22px rgba(0,0,0,.35)`
+  }
+  return style
+})
 const dateStyle = computed(() => ({ color: state.dateColor || '' }))
 </script>
 
