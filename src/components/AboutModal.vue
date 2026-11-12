@@ -116,7 +116,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.7.5</span>
+            <span class="am-chip">v1.7.6</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>
