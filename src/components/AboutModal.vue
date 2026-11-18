@@ -3,30 +3,42 @@ import { ref, watch, nextTick } from 'vue'
 import { ui } from '../store'
 import { useGearModal } from '../store/useGearModal'
 
-/* 更新日志：新版本在上。items 为 { t, tag }，tag: 'new' 新增（绿）/ 'fix' 修复（黄），缺省无标签 */
-const CHANGES = [
+/* 更新日志：新版本在上。items 为 { t, tag }，tag: 'new' 新增（绿）/ 'opt' 优化（蓝）/ 'fix' 修复（黄），缺省无标签 */
+const TAG_MAP = {
+  new: { cls: 'cl-new', text: '新增' },
+  opt: { cls: 'cl-opt', text: '优化' },
+  fix: { cls: 'cl-fix', text: '修复' }
+}
+const ALL_CHANGES = [
   {
-    ver: 'v1.7.6',
+    ver: 'v1.7.7', date: '2026-11-18',
+    items: [
+      { t: '优化了文件夹的显示效果', tag: 'opt' },
+      { t: '修复了一些已知使用体验问题', tag: 'fix' }
+    ]
+  },
+  {
+    ver: 'v1.7.6', date: '2026-11-12',
     items: [
       { t: '全新液态玻璃视觉，默认壁纸换新', tag: 'new' },
       { t: '设置项目增加星标置顶，免去翻找更方便', tag: 'new' },
       { t: '搜索框链接联想，能通过搜索框快速访问链接了', tag: 'new' },
-      { t: '优化设置页面逻辑' },
+      { t: '优化设置页面逻辑', tag: 'opt' },
       { t: '修复了一些已知问题', tag: 'fix' }
     ]
   },
   {
-    ver: 'v1.7.5',
+    ver: 'v1.7.5', date: '2026-10-14',
     items: [
       { t: '新增文件夹切换分页：滚轮 / 箭头 / 分页点 3D 滚筒切换，两侧磨砂预览，快速切换不卡顿', tag: 'new' },
-      { t: '优化拖拽创建文件夹：图标重叠合并预览，消失与生成动画衔接、其余图标平滑补位', tag: 'new' }
+      { t: '优化拖拽创建文件夹：图标重叠合并预览，消失与生成动画衔接、其余图标平滑补位', tag: 'opt' }
     ]
   },
   {
-    ver: 'v1.7.1',
+    ver: 'v1.7.1', date: '2026-09-30',
     items: [
-      { t: '新增 / 编辑表单从触发磁贴锚点展开，关闭收回磁贴' },
-      { t: '无界模式解锁搜索框透明度 / 圆角' },
+      { t: '新增 / 编辑表单从触发磁贴锚点展开，关闭收回磁贴', tag: 'new' },
+      { t: '无界模式解锁搜索框透明度 / 圆角', tag: 'new' },
       { t: '预览模式下禁止搜索', tag: 'fix' },
       { t: '引擎下拉被拓展坞遮挡（#app 层叠上下文）', tag: 'fix' },
       { t: '「依次落位」动画下磁贴悬浮动效失效', tag: 'fix' },
@@ -37,7 +49,7 @@ const CHANGES = [
     ]
   },
   {
-    ver: 'v1.7.0',
+    ver: 'v1.7.0', date: '2026-09-24',
     items: [
       { t: '页面布局：时钟 / 搜索框 / 拓展坞独立定位，全屏拖拽编辑器，位置预设自动错开', tag: 'new' },
       { t: '文件夹壁纸轮换：批量导入图片，支持每次打开随机 / 定时更换', tag: 'new' },
@@ -52,21 +64,21 @@ const CHANGES = [
     ]
   },
   {
-    ver: 'v1.5.1',
+    ver: 'v1.5.1', date: '2026-09-18',
     items: [
       { t: '设置左侧「悬浮目录」：窗口外纯文字导航，点击定位分组，滚动联动高亮', tag: 'new' },
       { t: '日期「农历」格式（1900-2100 查表）', tag: 'new' },
       { t: '「自动适配颜色」开关：按壁纸识别主色 / 次色，时间与日期分别着色', tag: 'new' },
-      { t: '图标形状「半圆角」对角异形，小图标下与圆形更易区分' },
+      { t: '图标形状「半圆角」对角异形，小图标下与圆形更易区分', tag: 'new' },
       { t: '移除齿轮拖拽，解决偶发「点击设置无响应」', tag: 'fix' },
       { t: '设置目录滚动到底未高亮最后一个分组', tag: 'fix' }
     ]
   },
   {
-    ver: 'v1.5.0',
+    ver: 'v1.5.0', date: '2026-09-18',
     items: [
       { t: '「无界」设计风格：磁贴去卡片框与毛玻璃，仅保留图标与名称', tag: 'new' },
-      { t: '无界下磁贴名称支持 始终 / 悬浮 / 不显示 三态，材质类设置自动置灰' },
+      { t: '无界下磁贴名称支持 始终 / 悬浮 / 不显示 三态，材质类设置自动置灰', tag: 'new' },
       { t: '「安装扩展」入口：齿轮菜单直达宣传页', tag: 'new' }
     ]
   },
@@ -82,6 +94,12 @@ const CHANGES = [
   { ver: 'v1.1.0', items: [{ t: '新增主题色自定义与实时预览，搜索引擎下拉与设置分组优化' }] },
   { ver: 'v1.0.0', items: [{ t: '首个版本：时钟、搜索、快捷链接、文件夹、壁纸、拓展坞、明暗主题' }] }
 ]
+/* 1.4.0 及更早折叠为「早期版本」；1.5.0 起显示更新年月 */
+const EARLY_START = 'v1.4.0'
+const _earlyIdx = ALL_CHANGES.findIndex(c => c.ver === EARLY_START)
+const CHANGES = _earlyIdx > -1 ? ALL_CHANGES.slice(0, _earlyIdx) : ALL_CHANGES
+const EARLY_VERSIONS = _earlyIdx > -1 ? ALL_CHANGES.slice(_earlyIdx) : []
+const earlyOpen = ref(false)
 
 /* 滚动更新日志时聚焦弹窗：隐藏图标/作者，让日志占据更大空间。
    监听 changelog 自身滚动；聚焦只隐藏 hero，不改 changelog 尺寸，避免 Chromium 重置其 scrollTop 导致反复闪烁。 */
@@ -116,7 +134,7 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
         <div class="am-info">
           <div class="am-name">SimpleTab 简页</div>
           <div class="am-meta">
-            <span class="am-chip">v1.7.6</span>
+            <span class="am-chip">v1.7.7</span>
             <span>作者 · 史宇辰</span>
           </div>
         </div>
@@ -127,13 +145,36 @@ const { modalRef, modalOrigin, closing, closeModal } = useGearModal('about')
       <div class="am-log-head">更新日志</div>
       <div class="changelog" @scroll="onLogScroll">
         <div v-for="c in CHANGES" :key="c.ver" class="cl-item">
-          <span class="cl-ver">{{ c.ver }}</span>
+          <div class="cl-head">
+            <span class="cl-ver">{{ c.ver }}</span>
+            <span class="cl-date">{{ c.date }}</span>
+          </div>
           <ul>
             <li v-for="(it, i) in c.items" :key="i">
-              <span v-if="it.tag" class="cl-tag" :class="it.tag === 'new' ? 'cl-new' : 'cl-fix'">{{ it.tag === 'new' ? '新增' : '修复' }}</span>
+              <span v-if="TAG_MAP[it.tag]" class="cl-tag" :class="TAG_MAP[it.tag].cls">{{ TAG_MAP[it.tag].text }}</span>
               <span>{{ it.t }}</span>
             </li>
           </ul>
+        </div>
+
+        <!-- 1.4.0 及更早：折叠为「早期版本」 -->
+        <div class="cl-item cl-early">
+          <button type="button" class="cl-early-head" :class="{ open: earlyOpen }" @click="earlyOpen = !earlyOpen">
+            <span class="cl-ver">早期版本</span>
+            <span class="cl-date">v1.4.0 及更早</span>
+            <svg class="cl-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div v-show="earlyOpen" class="cl-early-body">
+            <div v-for="c in EARLY_VERSIONS" :key="c.ver" class="cl-early-group">
+              <span class="cl-ver">{{ c.ver }}</span>
+              <ul>
+                <li v-for="(it, i) in c.items" :key="i">
+                  <span v-if="TAG_MAP[it.tag]" class="cl-tag" :class="TAG_MAP[it.tag].cls">{{ TAG_MAP[it.tag].text }}</span>
+                  <span>{{ it.t }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

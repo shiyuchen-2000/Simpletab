@@ -243,6 +243,56 @@ function rowCount(rects) {
   }
   return rows
 }
+/* 对比前后位置并播放补位动画；leave 中的磁贴已脱离布局，不参与测量 */
+function animateTileShifts() {
+  const a = areaRef.value?.$el
+  if (!a) return
+  const now = new Map()
+  const rects = []
+  a.querySelectorAll('.tile:not(.add):not(.tile-leave-active)').forEach(el => {
+    const r = el.getBoundingClientRect()
+    const key = el.dataset.id || el.dataset.fid
+    if (!key) return
+    now.set(key, { x: r.left, y: r.top })
+    rects.push({ el, key, rect: r })
+  })
+  /* 行数变化（1 行 ↔ 2 行）时换行无法用位移动画表达，直接重排，避免"抽搐"似的补位动画 */
+  if (rowCount(prevTileRects) === rowCount(now)) {
+    for (const { el, key, rect } of rects) {
+      const p = prevTileRects.get(key)
+      if (p && (p.x !== rect.left || p.y !== rect.top)) {
+        el.animate(
+          [
+            { transform: `translate(${p.x - rect.left}px, ${p.y - rect.top}px)` },
+            { transform: 'translate(0,0)' }
+          ],
+          { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
+        )
+      }
+    }
+  }
+  prevTileRects = now
+}
+/* 删除磁贴时：让 leave 元素立即脱离 flex 流并固定在原位置淡出，
+   否则它会一直占位到退场动画结束，其余磁贴要等 0.5s 后才补位（看起来像没有过渡） */
+let leaveShiftPending = false
+function onBeforeTileLeave(el) {
+  const area = areaRef.value?.$el
+  if (!area) return
+  const r = el.getBoundingClientRect()
+  const a = area.getBoundingClientRect()
+  el.style.position = 'absolute'
+  el.style.left = (r.left - a.left + area.scrollLeft) + 'px'
+  el.style.top = (r.top - a.top + area.scrollTop) + 'px'
+  el.style.width = r.width + 'px'
+  el.style.height = r.height + 'px'
+  el.style.margin = '0'
+  el.style.zIndex = '0'
+  el.style.pointerEvents = 'none'
+  /* 布局已变化但 MutationObserver 只监听 childList，手动补一次位置对比 */
+  leaveShiftPending = true
+  requestAnimationFrame(animateTileShifts)
+}
 function observeTileShifts() {
   tileObserver?.disconnect()
   const area = areaRef.value?.$el
@@ -250,33 +300,9 @@ function observeTileShifts() {
   prevTileRects = snapshotTileRects()
   tileObserver = new MutationObserver(() => {
     requestAnimationFrame(() => {
-      const a = areaRef.value?.$el
-      if (!a) return
-      const now = new Map()
-      const rects = []
-      a.querySelectorAll('.tile:not(.add)').forEach(el => {
-        const r = el.getBoundingClientRect()
-        const key = el.dataset.id || el.dataset.fid
-        if (!key) return
-        now.set(key, { x: r.left, y: r.top })
-        rects.push({ el, key, rect: r })
-      })
-      /* 行数变化（1 行 ↔ 2 行）时换行无法用位移动画表达，直接重排，避免"抽搐"似的补位动画 */
-      if (rowCount(prevTileRects) === rowCount(now)) {
-        for (const { el, key, rect } of rects) {
-          const p = prevTileRects.get(key)
-          if (p && (p.x !== rect.left || p.y !== rect.top)) {
-            el.animate(
-              [
-                { transform: `translate(${p.x - rect.left}px, ${p.y - rect.top}px)` },
-                { transform: 'translate(0,0)' }
-              ],
-              { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
-            )
-          }
-        }
-      }
-      prevTileRects = now
+      /* leave 元素移除时再触发的一次补位：位置已在 before-leave 时补过，跳过以免二次跳动 */
+      if (leaveShiftPending) { leaveShiftPending = false; return }
+      animateTileShifts()
     })
   })
   tileObserver.observe(area, { childList: true })
@@ -368,7 +394,8 @@ function onAreaDrop(e) {
 
 <template>
   <TransitionGroup tag="div" name="tile" class="link-area" id="linkArea" ref="areaRef"
-       @dragover="onAreaDragover" @drop="onAreaDrop" @after-leave="onAfterTileLeave">
+       :class="{ 'is-dragging': !!draggingId }"
+       @dragover="onAreaDragover" @drop="onAreaDrop" @before-leave="onBeforeTileLeave" @after-leave="onAfterTileLeave">
 
     <!-- 文件夹磁贴（恒排最前） -->
     <div v-for="f in state.folders" :key="f.id"

@@ -9,7 +9,8 @@ import { state, ui, toast } from './state'
 import { save } from './persistence'
 import { pruneEmptyFolders } from './folders'
 import { ensureFavicon, hostOf } from './faviconCache'
-import { uid, normalizeUrl } from './utils'
+import { uid, normalizeUrl, titleFromUrl } from './utils'
+import { fetchPageTitle } from './pageTitle'
 
 /* ---------- 链接增删改 ---------- */
 export function openAddForm(anchorEl, folderId) {
@@ -77,6 +78,19 @@ export function closeForm() {
   ui.linkForm.closing = true
   setTimeout(() => { ui.linkForm.visible = false; ui.linkForm.closing = false }, 190)
 }
+/* 保存后异步读取网页标题：仅在标题仍为兜底值、网址未变时更新，
+   避免覆盖用户随后的手动修改 */
+function applyFetchedTitle(link, url, fallback) {
+  fetchPageTitle(url).then(title => {
+    if (!title) return
+    /* 用 id 找当前响应式对象再更新：不能拿原始对象做 includes / 比较，
+       Vue 数组里存的是响应式代理，引用不相等会导致误判"已删除"而丢弃标题 */
+    const cur = state.links.find(x => x.id === link.id)
+    if (!cur || cur.url !== url || cur.title !== fallback) return
+    cur.title = title
+    save()
+  })
+}
 export function saveForm() {
   const url = normalizeUrl(ui.linkForm.url)
   const titleInput = ui.linkForm.name.trim()
@@ -95,7 +109,8 @@ export function saveForm() {
     return
   }
   if (!url) { ui.linkForm.err = '网址无效，请检查后重试'; return }
-  const title = titleInput || new URL(url).hostname.replace(/^www\./, '')
+  /* 标题留空时先用域名兜底（中文域名保留原样），保存后再异步读取网页标题替换 */
+  const title = titleInput || titleFromUrl(ui.linkForm.url) || new URL(url).hostname.replace(/^www\./, '')
   let folderId = null
   const fv = ui.linkForm.folderSel
   if (fv === '__new') {
@@ -106,9 +121,11 @@ export function saveForm() {
   } else if (fv) folderId = fv
   else folderId = null
   if (ui.linkForm.mode === 'add') {
-    state.links.push({ id: uid(), title, url, folderId, inDock: false, iconMode: 'auto' })
+    const link = { id: uid(), title, url, folderId, inDock: false, iconMode: 'auto' }
+    state.links.push(link)
     toast('已添加 ' + title)
     ensureFavicon(hostOf(url))   // 新链接图标即时预热，不必等下次开新标签页
+    if (!titleInput) applyFetchedTitle(link, url, title)
   } else {
     const l = state.links.find(x => x.id === ui.linkForm.id)
     if (l) {
@@ -117,6 +134,7 @@ export function saveForm() {
       if (oldFid && oldFid !== folderId) pruneEmptyFolders()
       toast('已保存修改')
       ensureFavicon(hostOf(url))   // 编辑换网址后刷新图标缓存
+      if (!titleInput) applyFetchedTitle(l, url, title)
     }
   }
   ui.linkForm.visible = false
@@ -125,8 +143,6 @@ export function saveForm() {
 
 /* ---------- 批量新增：多行解析 → 去重 → 一次写入 ---------- */
 const looksLikeUrl = v => /^https?:\/\//i.test(v) || /^[\w-]+(\.[\w-]+)+/.test(v)
-// 纯网址时的标题兜底：取主域名首段，去掉连字符、首字母大写（与单条表单一致）
-const titleFromHost = h => h.replace(/^www\./, '').split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 export function saveBatchForm() {
   const existing = new Set(state.links.map(l => normalizeUrl(l.url)))
   const batch = []
@@ -146,7 +162,7 @@ export function saveBatchForm() {
     const u = normalizeUrl(url)
     if (!u || existing.has(u)) { skipped++; continue }
     existing.add(u)
-    const title = name.trim() || titleFromHost(new URL(u).hostname)
+    const title = name.trim() || titleFromUrl(url)
     batch.push({ id: uid(), title, url: u, folderId: null, inDock: false, iconMode: 'auto' })
   }
   if (!batch.length) {

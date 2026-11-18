@@ -98,12 +98,9 @@ html[data-style="glass"] body.links-open .links-glass {
   transition: opacity .7s var(--ease);
 }
 
-/* 文件夹动画期间：整页折射保持不变（避免"关-开"视觉抽搐），
-   只暂停面板自身的背景模糊来减负（链接页磁贴已整体隐藏） */
-body.folder-animating .folder-panel {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+/* 文件夹动画期间：整页折射保持不变（避免"关-开"视觉抽搐）。
+   注意：不要在这里关闭 .folder-panel 的 backdrop-filter——动画结束瞬间再恢复大滤镜
+   会重新创建合成层，表现为打开后"卡在中间态一下"（实测第 3~5 次明显）。 */
 
 /* 系统要求降低透明度：退回实色/普通模糊，不做折射 */
 @media (prefers-reduced-transparency: reduce) {

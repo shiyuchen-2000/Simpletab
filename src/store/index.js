@@ -17,6 +17,8 @@ export * from './folders'
 export * from './links'
 export * from './interactions'
 export * from './wallpaper'
+export * from './bootCache'
+export * from './wallpaperThumb'
 export * from './reset'
 
 // 纯副作用模块（无导出）：材质与质感微调 / 动画维度 dataset

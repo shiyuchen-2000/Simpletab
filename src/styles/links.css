@@ -79,6 +79,7 @@ body.links-leaving #linksSection .tile:nth-child(12){animation-delay:.275s;}
 .link-area:has(.tile-enter-active)::-webkit-scrollbar,.link-area:has(.tile-leave-active)::-webkit-scrollbar,.link-area.tile-anim::-webkit-scrollbar{display:none;}
 .link-area{
   /* fit-content：宽度收缩到磁贴实际宽度并整体居中（不偏左）；磁贴多到超宽时铺满父容器换行左对齐 */
+  position:relative;   /* 让 leave 中的磁贴能绝对定位在原位置淡出，立即腾出布局 */
   width:fit-content;max-width:100%;margin:30vh auto 0;
   display:flex;flex-wrap:wrap;gap:var(--tile-gap,26px);justify-content:flex-start;align-items:flex-start;
   max-height:calc(100vh - 34vh);overflow-y:auto;
@@ -122,7 +123,18 @@ body.clock-pos-left .link-area,body.clock-pos-right .link-area{margin-top:34vh;}
 @keyframes bgin{from{opacity:0;}to{opacity:1;}}
 .tile:hover{transform:translateY(var(--tile-hover-lift,-5px)) translateZ(0);background:var(--glass-strong);}
 .tile:active{transform:translateY(-2px) scale(.98) translateZ(0);}
-.tile.dragging{opacity:.35;}
+.tile.dragging{opacity:.85;}
+/* 拖拽期间其他磁贴轻微晃动，松手 / 拖出取消后立即静止 */
+.link-area.is-dragging .tile:not(.dragging):not(.add),
+.fp-grid.is-dragging .tile:not(.dragging):not(.add){
+  /* !important：入场动画规则带 #linksSection ID，特异性更高，不提升会被覆盖 */
+  animation:tileWiggle .5s ease-in-out infinite !important;
+}
+@keyframes tileWiggle{
+  0%,100%{rotate:0deg;}
+  25%{rotate:-1.2deg;}
+  75%{rotate:1.2deg;}
+}
 /* 悬浮动效关闭：设置悬浮强度为 0 时禁用 hover/active 位移 */
 body.no-tile-hover .tile:hover,body.no-tile-hover .tile:active{transform:none;}
 .tile .t-ico{width:var(--tile-ico,46px);height:var(--tile-ico,46px);border-radius:var(--ico-radius,calc(13px * var(--radius-scale,1)));overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-ico,46px) * .46);font-weight:600;color:var(--accent-icon-text);background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));box-shadow:0 6px 16px rgba(var(--accent-rgb),var(--tile-glow,.3));position:relative;}

@@ -5,6 +5,7 @@
 // ============================================================
 import { ref, computed, watchEffect } from 'vue'
 import { state, ui } from './state'
+import { setBootTheme } from './bootCache'
 
 /* ---------- 主题 / 位置预设：应用到 body/html（驱动全局 CSS 类） ---------- */
 const darkMq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -17,6 +18,8 @@ else if (darkMq.addListener) darkMq.addListener(onSystemDarkChange)
 export const resolvedTheme = computed(() => state.theme === 'system' ? (systemDark.value ? 'dark' : 'light') : state.theme)
 watchEffect(() => {
   document.documentElement.dataset.theme = resolvedTheme.value
+  /* 同步写入首帧缓存：下次刷新时 boot.js 在挂载前就能套用正确主题 */
+  setBootTheme(resolvedTheme.value)
 })
 /* 风格维度：glass（毛玻璃，默认）/ fluent（Fluent 2）/ borderless（无界），驱动 CSS [data-style] 覆盖块 */
 watchEffect(() => {

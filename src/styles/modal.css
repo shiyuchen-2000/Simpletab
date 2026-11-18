@@ -52,15 +52,28 @@
 }
 .changelog .cl-item{margin-bottom:.6rem;}
 .changelog .cl-item:last-child{margin-bottom:0;}
-.changelog .cl-ver{display:block;font-size:.78rem;font-weight:600;color:var(--accent-text);margin-bottom:.22rem;letter-spacing:.02em;}
+.changelog .cl-head{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;margin-bottom:.22rem;}
+.changelog .cl-ver{display:block;font-size:.78rem;font-weight:600;color:var(--accent-text);letter-spacing:.02em;}
+.changelog .cl-date{font-size:.68rem;color:var(--text-faint);font-weight:400;letter-spacing:.03em;font-variant-numeric:tabular-nums;}
+/* 早期版本折叠：默认收起，展开后显示 1.4.0 及更早 */
+.changelog .cl-early{margin-top:.35rem;padding-top:.35rem;border-top:1px solid var(--glass-border);}
+.changelog .cl-early-head{display:flex;align-items:baseline;gap:.6rem;width:100%;padding:.2rem 0;background:none;border:none;cursor:pointer;color:inherit;text-align:left;}
+.changelog .cl-early-head .cl-date{margin-left:auto;text-align:right;}
+.changelog .cl-arrow{flex:none;margin-left:.4rem;color:var(--text-faint);transition:transform .25s var(--ease);}
+.changelog .cl-early-head.open .cl-arrow{transform:rotate(180deg);}
+.changelog .cl-early-body{display:flex;flex-direction:column;gap:.7rem;margin:.3rem 0 .4rem;padding-left:.85rem;border-left:1px solid var(--glass-border);}
+.changelog .cl-early-group .cl-ver{font-size:.72rem;color:var(--text-dim);}
+.changelog .cl-early-group ul li{font-size:.76rem;color:var(--text-dim);}
 .changelog ul{list-style:none;padding:0;margin:0;}
 .changelog li{position:relative;font-size:.8rem;color:var(--text);line-height:1.62;padding-left:.85rem;}
 .changelog li::before{content:"";position:absolute;left:0;top:.58em;width:5px;height:5px;border-radius:50%;background:var(--accent);}
-/* 更新日志标签：新增绿底 / 修复黄底矩形 */
+/* 更新日志标签：新增绿底 / 优化蓝底 / 修复黄底矩形 */
 .changelog .cl-tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:.66rem;font-weight:600;line-height:1.55;margin-right:6px;vertical-align:1px;letter-spacing:.02em;}
 .changelog .cl-new{background:rgba(34,197,94,.16);color:#15803d;}
+.changelog .cl-opt{background:rgba(59,130,246,.16);color:#1d4ed8;}
 .changelog .cl-fix{background:rgba(234,179,8,.18);color:#a16207;}
 [data-theme="dark"] .changelog .cl-new{color:#4ade80;}
+[data-theme="dark"] .changelog .cl-opt{color:#60a5fa;}
 [data-theme="dark"] .changelog .cl-fix{color:#facc15;}
 /* 关于页：外窗尺寸固定，紧凑头部 + 日志主体；滚动日志时聚焦只隐藏 hero 让 changelog 变大 */
 .about-modal{display:flex;flex-direction:column;height:min(78vh,560px);overflow:hidden;text-align:left;}

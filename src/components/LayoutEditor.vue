@@ -10,7 +10,11 @@ let handleEl = null      // 当前拖拽的虚线框元素（onMove 直接改 DO
 let barDrag = null       // 工具栏拖动 { startX, startY, left, top }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
-watch(() => ui.layoutEdit, v => { if (v) begin() })
+watch(() => ui.layoutEdit, v => {
+  /* 编辑期间关闭时钟/搜索框的 left/top/width 过渡，否则会落后于虚线框 */
+  document.body.classList.toggle('layout-editing', v)
+  if (v) begin()
+})
 function begin() {
   const cur = resolveLayout()
   edit.value = { clock: { ...cur.clock }, search: { ...cur.search }, dock: { ...cur.dock } }
@@ -154,6 +158,7 @@ function resetLayout() {
 }
 function setSize(kind, key, val) { edit.value[kind][key] = +val; writeVars() }
 onBeforeUnmount(() => {
+  document.body.classList.remove('layout-editing')
   window.removeEventListener('mousemove', onMove)
   window.removeEventListener('mouseup', onUp)
   window.removeEventListener('mousemove', onBarMove)

@@ -1,8 +1,10 @@
 /* ============ 时钟（两页统一固定定位，位置预设一致） ============ */
 #clockWrap{
   position:fixed;z-index:2;text-align:center;pointer-events:none;
-  left:var(--clock-x,50%);top:var(--clock-y,15%);transform:translate(-50%,-50%);
-  scale:var(--clock-scale,1);
+  left:var(--clock-x,50%);top:var(--clock-y,15%);
+  /* scale 必须并入 transform：独立的 scale 属性与 translate(-50%) 的计算顺序不同，
+     缩放时元素中心会漂移（偏移动量 = 元素中心 × (1 - scale)），与布局编辑器的虚线框错位 */
+  transform:translate(-50%,-50%) scale(var(--clock-scale,1));
   transition:left .5s var(--ease),top .5s var(--ease),transform .5s var(--ease);
   animation:fadeOnly .5s ease both;
 }

@@ -28,3 +28,9 @@ body.clock-pos-right .search-bar:focus-within{background:rgba(15,22,32,.9);}
   .search-bar{width:min(var(--search-w,400px),78vw);}
   .search-bar:hover:not(.no-expand),.search-bar:focus-within:not(.no-expand),.search-bar.has-text:not(.no-expand){width:min(calc(var(--search-w,400px) + 220px),92vw);}
 }
+
+/* 页面布局编辑：关闭位置/宽度过渡，真实元素与虚线框同步跟手
+   （clock.css 的 left/top .5s、search.css 的 width .5s 只应在正常切换布局时生效） */
+body.layout-editing #clockWrap,
+body.layout-editing .search-wrap,
+body.layout-editing .search-bar{transition:none;}

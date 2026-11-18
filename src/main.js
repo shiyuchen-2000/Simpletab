@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './styles/main.css'
-import { loadState, loadFonts, applySaved, restoreFromSync, state, applyLayoutVars } from './store'
+import { loadState, loadFonts, applySaved, restoreFromSync, state, applyLayoutVars, hasBootThumb, saveThumbFromUrl, clearWallpaperThumb } from './store'
 import { loadFaviconCache, warmFaviconCache } from './store/faviconCache'
 import { initLiquidGlass } from './liquid'
 
@@ -16,6 +16,17 @@ async function bootstrap() {
   } else {
     // 本地数据为空（例如 Edge 清缓存清了扩展存储）：稍等账号云同步重新拉取后自动恢复，成功后顺手预热图标
     setTimeout(() => { restoreFromSync().then(ok => { if (ok) warmFaviconCache(state.links) }) }, 1500)
+  }
+  /* 首帧缓存自愈：无壁纸时清掉过期缩略图；老数据有壁纸但无缩略图时后台补生成，
+     让升级后的用户从第二次刷新起不再闪默认壁纸 */
+  if (!state.wallpaper) {
+    clearWallpaperThumb()
+  } else if (!hasBootThumb()) {
+    const url = state.wallpaper
+    const type = state.wallpaperType
+    setTimeout(() => {
+      if (state.wallpaper === url && !hasBootThumb()) saveThumbFromUrl(url, type)
+    }, 0)
   }
   createApp(App).mount('#app')
   // 液态玻璃折射：挂载后空闲启动，不阻塞首屏

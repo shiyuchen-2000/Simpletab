@@ -3,7 +3,6 @@ import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { state, ui, save, uid, toast, letterOf, openAddForm, deleteFolder, renameFolder, closeFolder, pruneEmptyFolders, openLinkUrl } from '../store'
 import { faviconSrc } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
-import FolderPreview from './FolderPreview.vue'
 
 // 展示中的文件夹：打开时更新；关闭后保留引用直到退出动画结束，避免 v-if 立即卸载导致无动画
 const displayFolder = ref(null)   // 仅用于关闭动画期间保留旧文件夹
@@ -16,8 +15,30 @@ const folder = computed(() => {
 const links = computed(() => folder.value ? state.links.filter(l => l.folderId === folder.value.id) : [])
 const editing = ref(false)
 const editTitle = ref('')
-const gridRef = ref(null)
-const panelRef = ref(null)
+/* 函数 ref：这两个元素都在 v-for 内部，字符串 ref 会被 Vue 收集成数组，
+   直接 .value.getBoundingClientRect() / .$el 会失效（曾报 getBoundingClientRect is not a function） */
+const gridEl = ref(null)
+const panelEl = ref(null)
+const setGridEl = el => { gridEl.value = el }
+const setPanelEl = el => { panelEl.value = el }
+
+/* 左上角缩略卡片：固定在"面板左上角 45° 外侧"的基准位置。
+   面板高度随文件夹内容变化，若按实时高度计算，切几个文件夹卡片就会上下漂移；
+   因此使用固定基准高度 MINI_BASE_H，位置只随窗口尺寸变化，切换文件夹时不动
+   （MINI_OFFSET = 卡片 96 + 间隙 16） */
+const MINI_OFFSET = 104   // 卡片 88 + 间隙 16
+const MINI_BASE_H = 350
+const MINI_TOP_SHIFT = 50   // 在基准位置基础上再整体下移 50px
+const miniPos = ref({ left: '0px', top: '0px' })
+function updateMiniPos() {
+  const w = Math.min(620, innerWidth * 0.92)
+  miniPos.value = {
+    left: Math.round((innerWidth - w) / 2 - MINI_OFFSET) + 'px',
+    top: Math.round((innerHeight - MINI_BASE_H) / 2 - MINI_OFFSET + MINI_TOP_SHIFT) + 'px'
+  }
+}
+updateMiniPos()
+if (typeof window !== 'undefined') window.addEventListener('resize', updateMiniPos)
 // 缩放锚点：指向触发打开的文件夹磁贴中心，让面板"从磁贴展开、落回磁贴"而非屏幕中心
 const panelOrigin = ref('50% 50%')
 
@@ -25,6 +46,29 @@ const panelOrigin = ref('50% 50%')
 /* 聚焦索引：相对 state.folders 数组；打开时定位到该文件夹，切换时循环滚动 */
 const focusedIndex = ref(0)
 const foldersList = computed(() => state.folders)
+/* 左上角缩略卡片栈：当前文件夹 + 后两个（循环）。切换时最前卡片退走、后面的前移补位 */
+const miniStack = computed(() => {
+  const list = foldersList.value
+  const n = list.length
+  if (!n || !folder.value) return []
+  const cur = list.findIndex(f => f.id === folder.value.id)
+  const start = cur >= 0 ? cur : 0
+  return Array.from({ length: Math.min(3, n) }, (_, d) => {
+    const f = list[(start + d) % n]
+    /* 只有最前一张需要图标；后两层只做卡片边缘占位 */
+    return { folder: f, depth: d, links: d === 0 ? state.links.filter(l => l.folderId === f.id).slice(0, 4) : [] }
+  })
+})
+let folderEnterTimer = null
+/* 堆叠层的位置/缩放：越靠后越向右上错开、越小越淡 */
+function miniCardStyle(depth) {
+  const y = depth * 7
+  return {
+    transform: `translate(${y}px, ${-y}px) scale(${1 - depth * 0.055})`,
+    opacity: 1 - depth * 0.2,
+    zIndex: 10 - depth
+  }
+}
 /* 渲染聚焦前后各 2 个面板（±2 作滚筒过渡缓冲，超出 ±1 隐藏）。
    key 策略：≥3 个文件夹用 folder.id（offset 变化 → DOM 复用 → transform 过渡出滚筒滚动）；
    <3 个时左右可能重复同一文件夹，改按 offset 作 key（牺牲位移动画，功能正常） */
@@ -41,27 +85,20 @@ const visibleFolders = computed(() => {
     return { folder: f, offset: off }
   })
 })
-/* 各面板 3D 定位：中间正视（0°），左侧 rotateY(+38°)、右侧 rotateY(-38°) 后退 + 缩小。
-   两侧 transition 略慢 → 切换时面板间视差；filter 磨砂模糊 */
+/* 只保留中间面板：左右两侧预览及其模糊/位移动画全部去掉，
+   减少大尺寸 filter/backdrop 合成层，切换时只播放入场动画 */
 function panelStyle(off) {
-  const dir = off < 0 ? 1 : -1
-  const hidden = Math.abs(off) > 1
-  const base = 'translate(-50%,-50%) translateX(' + (off * 42) + '%)'
   if (off === 0) {
     return {
-      transform: base + ' rotateY(0deg) translateZ(0) scale(1)',
-      opacity: 1, filter: 'none', zIndex: 4,
-      pointerEvents: 'auto',
-      transitionDuration: '.55s'
+      transform: 'translate(-50%,-50%) translateZ(0) scale(1)',
+      opacity: 1, filter: 'none', zIndex: 4, pointerEvents: 'auto'
     }
   }
+  /* transform 必须与中间面板一致：若隐藏态用 none，切换时 CSS transition 会把
+     translate(-50%,-50%) 也当成位移来过渡，面板会从右下角滑进来（看起来一直在晃） */
   return {
-    transform: base + ' rotateY(' + (dir * 38) + 'deg) translateZ(-260px) scale(.72)',
-    opacity: hidden ? 0 : .55,
-    filter: hidden ? 'blur(5px)' : 'blur(9px) saturate(110%)',
-    zIndex: hidden ? 1 : 3,
-    pointerEvents: 'none',
-    transitionDuration: '.68s'   // 两侧略慢 → 滚筒层次视差
+    transform: 'translate(-50%,-50%) translateZ(0) scale(1)',
+    opacity: 0, visibility: 'hidden', zIndex: 1, pointerEvents: 'none'
   }
 }
 /* 快速切换检测：连续切换间隔 < 260ms 进入快速模式——缩短过渡、跳过跨界动画，避免动画叠加卡顿 */
@@ -84,38 +121,6 @@ function switchFolder(dir) {
   const f = foldersList.value[focusedIndex.value]
   if (f) ui.folderOpenId = f.id
 }
-/* 封面流跨界滑入：半圈文件夹（从隐藏区 |offset|>1 进入可见区）从对应外侧滑入，
-   避免横穿（偶数环直径对面的文件夹从错误侧滑过）。
-   左进 → 从更左滑入（从左往右）；右进 → 从更右滑入（从右往左） */
-const prevOffsets = ref({})
-function animateFromSide(el, offset) {
-  const fromX = offset < 0 ? -72 : 72
-  const angle = offset < 0 ? 38 : -38
-  el.animate(
-    [
-      { transform: `translate(-50%,-50%) translateX(${fromX}%) rotateY(${angle}deg) translateZ(-260px) scale(.6)`, opacity: 0 },
-      { transform: `translate(-50%,-50%) translateX(${offset * 42}%) rotateY(${angle}deg) translateZ(-260px) scale(.72)`, opacity: .55 }
-    ],
-    { duration: 550, easing: 'cubic-bezier(.22,1,.36,1)' }
-  )
-}
-watch(visibleFolders, async () => {
-  await nextTick()
-  /* 先取消所有未完成的面板动画：快速切换时避免跨界动画叠加 / 卡在中间态 */
-  document.querySelectorAll('.cf-panel').forEach(el => el.getAnimations().forEach(a => a.cancel()))
-  if (fastMode.value) { prevOffsets.value = {}; return }   // 快速模式：跳过跨界动画，直接到位
-  const prev = prevOffsets.value
-  const next = {}
-  visibleFolders.value.forEach(it => {
-    const p = prev[it.folder.id]
-    if (p !== undefined && Math.abs(p) > 1 && Math.abs(it.offset) <= 1) {
-      const el = document.querySelector(`.cf-panel[data-fid="${it.folder.id}"]`)
-      if (el) animateFromSide(el, it.offset)
-    }
-    next[it.folder.id] = it.offset
-  })
-  prevOffsets.value = next
-})
 /* 分页点：直接跳转到指定文件夹 */
 function goToIndex(idx) {
   const n = foldersList.value.length
@@ -146,10 +151,18 @@ function addFolder() {
   goToIndex(idx)   // 聚焦并打开新文件夹
   toast('已创建「' + title + '」')
 }
-/* 滚轮：仅在磁贴网格外的面板区域切文件夹；网格内保持原滚动（链接多时需要滚动） */
+/* 滚轮切换锁：触控板一次滑动会连续触发 wheel，避免一次跳过多个文件夹 */
+let wheelLockedAt = 0
+const WHEEL_LOCK_MS = 160
 function onWheel(e) {
-  if (e.target.closest('.fp-grid')) return
+  /* 网格确实可滚动时保留内部滚动；内容不足以滚动时，滚轮照常切换文件夹，
+     否则鼠标停在面板的磁贴区上方会完全没反应（"有时候不跟手"） */
+  const grid = e.target.closest('.fp-grid')
+  if (grid && grid.scrollHeight > grid.clientHeight + 1) return
   e.preventDefault()
+  const now = Date.now()
+  if (now - wheelLockedAt < WHEEL_LOCK_MS) return
+  wheelLockedAt = now
   switchFolder(e.deltaY > 0 ? 1 : -1)
 }
 
@@ -168,21 +181,71 @@ watch(() => ui.folderOpenId, async (id, prev) => {
   /* 打开时保留当前文件夹：关闭后 folderOpenId 清空，computed 回退到 displayFolder，
      面板才不立即卸载，能完整播放关闭动画（翻转落回磁贴） */
   if (id) displayFolder.value = state.folders.find(f => f.id === id) || null
-  if (!id) return
+  if (!id) {
+    document.body.classList.remove('folder-entering')
+    /* 关闭：缩略卡落回原文件夹磁贴位置（与面板关闭动画同步，约 200ms） */
+    const mini = document.querySelector('.fp-mini-stack')
+    const tile = prev ? document.querySelector(`.folder-tile[data-fid="${prev}"]`) : null
+    if (mini && tile) {
+      const mr = mini.getBoundingClientRect()
+      const tr = tile.getBoundingClientRect()
+      const dx = Math.round((tr.left + tr.width / 2) - (mr.left + mr.width / 2))
+      const dy = Math.round((tr.top + tr.height / 2) - (mr.top + mr.height / 2))
+      mini.animate(
+        [
+          { transform: 'none', opacity: 1 },
+          { transform: `translate(${dx}px, ${dy}px) scale(.72)`, opacity: 0 }
+        ],
+        { duration: 200, easing: 'cubic-bezier(.4,0,1,1)' }
+      )
+    }
+    return
+  }
   /* 聚焦索引同步到打开的文件夹（打开 / 封面流切换都同步） */
   const idx = state.folders.findIndex(f => f.id === id)
   if (idx > -1) focusedIndex.value = idx
-  /* 仅"真正打开"（从无到有）时显示滚轮提示并更新展开锚点；封面流内切换（prev 非空）不做 */
-  if (prev) return
+  /* 封面流内切换（prev 非空）：不播放入场衔接，只移除打开延迟 */
+  if (prev) {
+    document.body.classList.remove('folder-entering')
+    return
+  }
+  /* 真正打开：缩略卡先从磁贴飞入，面板稍后从缩略卡位置展开 */
+  document.body.classList.add('folder-entering')
+  clearTimeout(folderEnterTimer)
+  folderEnterTimer = setTimeout(() => document.body.classList.remove('folder-entering'), 1200)
   showWheelHint()
   const tile = document.querySelector(`.folder-tile[data-fid="${id}"]`)
-  if (!tile) { panelOrigin.value = '50% 50%'; return }
+  if (!tile) {
+    document.body.classList.remove('folder-entering')
+    panelOrigin.value = '50% 50%'
+    return
+  }
   const r = tile.getBoundingClientRect()
   const cx = r.left + r.width / 2
   const cy = r.top + r.height / 2
-  await nextTick()   // 等面板渲染并 flex 居中后再测量，换算相对面板左上角的偏移
-  const pr = panelRef.value ? panelRef.value.getBoundingClientRect() : null
-  panelOrigin.value = pr ? `${cx - pr.left}px ${cy - pr.top}px` : '50% 50%'
+  await nextTick()   // 等面板渲染并 flex 居中后再测量
+  /* 面板 origin 指向缩略卡中心（不再指向磁贴）：文件夹从缩略图里展开 */
+  const w = panelEl.value ? panelEl.value.offsetWidth : 620
+  const h = panelEl.value ? panelEl.value.offsetHeight : 400
+  const pl = (innerWidth - w) / 2
+  const pt = (innerHeight - h) / 2
+  const ml = parseFloat(miniPos.value.left) || 0
+  const mt = parseFloat(miniPos.value.top) || 0
+  panelOrigin.value = `${Math.round(ml + 44 - pl)}px ${Math.round(mt + 44 - pt)}px`
+  /* 缩略卡先飞入 320ms；面板入场由 body.folder-entering 延迟 280ms */
+  const mini = document.querySelector('.fp-mini-stack')
+  if (mini) {
+    const mr = mini.getBoundingClientRect()
+    const dx = Math.round(cx - (mr.left + mr.width / 2))
+    const dy = Math.round(cy - (mr.top + mr.height / 2))
+    mini.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(.72)`, opacity: 0 },
+        { transform: 'none', opacity: 1 }
+      ],
+      { duration: 240, easing: 'cubic-bezier(.22,1,.36,1)' }
+    )
+  }
 })
 // 动画结束后清掉 displayFolder（打开时 folder 走 folderOpenId，仅关闭动画回退用 displayFolder）
 function onAnimationEnd(e) {
@@ -200,7 +263,7 @@ function commitEdit() {
 }
 
 /* ---------- 文件夹内拖拽排序（实时换位：拖动中让位，松手落位，拖出恢复） ---------- */
-let folderDragId = null
+const folderDragId = ref(null)
 let folderDragOrder = []
 let folderDropped = false
 let folderLastMove = 0
@@ -212,7 +275,7 @@ function startFolderLinkDrag(e, l) {
   e.dataTransfer.setData('text/link', l.id)
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setDragImage(folderEmptyImg, 0, 0)
-  folderDragId = l.id
+  folderDragId.value = l.id
   folderDropped = false
   folderLastTarget = -1; folderLastMove = 0
   folderDragOrder = state.links.filter(x => x.folderId === ui.folderOpenId).map(x => x.id)
@@ -227,7 +290,7 @@ function endFolderLinkDrag(e) {
       ...folderDragOrder.map(id => state.links.find(x => x.id === id)).filter(Boolean)
     ]
   }
-  folderDragId = null
+  folderDragId.value = null
   clearDropLine()
 }
 function computeInsertIndex(container, clientX, clientY) {
@@ -279,7 +342,7 @@ function onGridDrop(e) {
 function onGridDragover(e) {
   if (e.dataTransfer.types.includes('text/link')) {
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'
-    const grid = gridRef.value?.$el
+    const grid = gridEl.value?.$el || gridEl.value
     if (grid) moveFolderLink(e.clientX, e.clientY)
   }
 }
@@ -288,15 +351,15 @@ function moveFolderLink(clientX, clientY) {
   const now = Date.now()
   if (now - folderLastMove < 50) return
   folderLastMove = now
-  const grid = gridRef.value?.$el
-  if (!grid || !ui.folderOpenId || !folderDragId) return
+  const grid = gridEl.value?.$el || gridEl.value
+  if (!grid || !ui.folderOpenId || !folderDragId.value) return
   const target = computeInsertIndex(grid, clientX, clientY).index
   if (target === folderLastTarget) return
   folderLastTarget = target
-  const l = state.links.find(x => x.id === folderDragId)
+  const l = state.links.find(x => x.id === folderDragId.value)
   if (!l) return
   let arr = state.links.filter(x => x.folderId === ui.folderOpenId)
-  const oi = arr.findIndex(x => x.id === folderDragId)
+  const oi = arr.findIndex(x => x.id === folderDragId.value)
   if (oi > -1) arr.splice(oi, 1)
   arr.splice(Math.max(0, Math.min(target, arr.length)), 0, l)
   const ids = arr.map(x => x.id)
@@ -305,7 +368,11 @@ function moveFolderLink(clientX, clientY) {
     ...ids.map(id => state.links.find(x => x.id === id)).filter(Boolean)
   ]
 }
-onBeforeUnmount(() => { clearDropLine(); clearTimeout(hintTimer) })
+onBeforeUnmount(() => {
+  clearDropLine(); clearTimeout(hintTimer)
+  clearTimeout(folderEnterTimer)
+  if (typeof window !== 'undefined') window.removeEventListener('resize', updateMiniPos)
+})
 
 function openLink(l) { openLinkUrl(l.url) }
 /* 磁贴图标：加载失败移除 img（露出字母兜底），成功隐藏底层字母（透明底图标不叠加） */
@@ -332,14 +399,30 @@ function letterStyle(l) {
 <template>
   <div class="folder-backdrop" :class="{ show: !!ui.folderOpenId, closing: ui.folderClosing }"
        @animationend="onAnimationEnd">
+    <!-- 左上角缩略卡片栈：独立定位，不随面板动画；切换时最前卡退走、后面卡前移补位 -->
+    <TransitionGroup name="mini" tag="div" class="fp-mini-stack" :style="miniPos" aria-hidden="true">
+      <div v-for="m in miniStack" :key="m.folder.id" class="fp-mini-card" :style="miniCardStyle(m.depth)">
+        <template v-if="m.depth === 0">
+          <template v-if="m.links.length">
+            <div v-for="l in m.links" :key="l.id" class="fp-mini-cell">
+              <!-- 与主界面一致：文字图标只显示字母；原始图标才加载 favicon -->
+              <LetterIco :letter="letterOf(l.title)" />
+              <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                   @error="e => e.target.remove()">
+            </div>
+          </template>
+          <div v-else class="fp-mini-add">+</div>
+        </template>
+      </div>
+    </TransitionGroup>
     <!-- 封面流滚筒：中间聚焦（完整交互）+ 左右模糊预览。
          空白关闭由 App.onClick 统一收口（先关表单再关文件夹，避免抢跑）。
          fast 类：快速连续切换时缩短过渡，动画直接到位不卡顿 -->
     <div class="cf" :class="{ fast: fastMode }" @wheel="onWheel">
       <div v-for="it in visibleFolders" :key="it.folder.id" class="cf-panel" :data-fid="it.folder.id" :style="panelStyle(it.offset)">
-        <template v-if="Math.abs(it.offset) <= 1">
+        <template v-if="it.offset === 0">
         <!-- 中间：聚焦面板，保留完整交互（拖拽/编辑/添加/删除） -->
-        <div v-if="it.offset === 0 && folder" ref="panelRef" class="folder-panel" :style="{ transformOrigin: panelOrigin }">
+        <div v-if="folder" :ref="setPanelEl" class="folder-panel" :style="{ transformOrigin: panelOrigin }">
           <div class="fp-head">
             <span class="fp-ico">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
@@ -353,7 +436,9 @@ function letterStyle(l) {
             </button>
           </div>
 
-          <TransitionGroup tag="div" name="tile" class="fp-grid" ref="gridRef" @dragover="onGridDragover" @drop="onGridDrop">
+          <TransitionGroup tag="div" name="tile" class="fp-grid" :ref="setGridEl"
+                          :class="{ 'is-dragging': !!folderDragId }"
+                          @dragover="onGridDragover" @drop="onGridDrop">
             <div v-for="l in links" :key="l.id"
                  class="tile" :data-id="l.id" draggable="true"
                  @click="openLink(l)"
@@ -374,10 +459,8 @@ function letterStyle(l) {
             </div>
           </TransitionGroup>
         </div>
-        <!-- 两侧：模糊预览 -->
-        <FolderPreview v-else :folder="it.folder" />
         </template>
-        <!-- 远处面板：轻量占位（key 唯一 + 滚筒进入过渡，不渲染磁贴省 DOM） -->
+        <!-- 两侧/远处：轻量占位，不渲染内容（左右预览已移除） -->
         <div v-else class="cf-blank"></div>
       </div>
 

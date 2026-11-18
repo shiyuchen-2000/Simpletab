@@ -6,6 +6,7 @@
 import { state, toast } from './state'
 import { save } from './persistence'
 import { loadWallpaperBlob, saveFolderImage, loadFolderImage, clearFolderImages, kindOfBlob } from './wallpaperDB'
+import { saveWallpaperThumb, clearWallpaperThumb } from './wallpaperThumb'
 
 const WALLPAPER_MAX_DIM = 3840
 function wphAsAlpha(ctx, w, h) {
@@ -46,6 +47,7 @@ async function applyFolderWallpaper(i) {
   state.wallpaper = URL.createObjectURL(blob)
   state.wallpaperType = 'image'
   state.wallpaperFolderIndex = i
+  saveWallpaperThumb(blob)   // 首帧缩略图：下次刷新先用这张小图顶上
 }
 function startWallpaperRotate() {
   stopWallpaperRotate()
@@ -120,6 +122,9 @@ export async function clearWallpaperFolder() {
       if (blob) {
         state.wallpaper = URL.createObjectURL(blob)
         state.wallpaperType = kindOfBlob(blob)
+        saveWallpaperThumb(blob)
+      } else {
+        clearWallpaperThumb()
       }
     } catch (e) { /* ignore */ }
   }

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { state, ui, save, toast, resolvedTheme, isVideoWallpaper, importWallpaperFolder, clearWallpaperFolder, rotateWallpaperNow, setWallpaperRotateMode, setWallpaperRotateInterval } from '../store'
+import { state, ui, save, toast, resolvedTheme, isVideoWallpaper, importWallpaperFolder, clearWallpaperFolder, rotateWallpaperNow, setWallpaperRotateMode, setWallpaperRotateInterval, saveWallpaperThumb, saveVideoThumb, clearWallpaperThumb } from '../store'
 import { saveWallpaperBlob, clearWallpaperBlob } from '../store/wallpaperDB'
 import { useGearModal } from '../store/useGearModal'
 
@@ -73,6 +73,7 @@ async function onFile(e) {
     try { await probeVideo(f) } catch (err) { toast('无法读取该视频文件，请换一个', 'err'); return }
     try { await saveWallpaperBlob(f) } catch (err) { toast('壁纸保存失败：文件过大或存储空间不足', 'err'); return }
     swap(URL.createObjectURL(f), 'video')
+    saveVideoThumb(f)   // 首帧缩略图：下次刷新先用小图顶上，避免闪默认壁纸
     save()
     toast('视频壁纸已应用' + (f.size > 100 * 1024 * 1024 ? '（占用 ' + (f.size / 1024 / 1024).toFixed(0) + 'MB）' : ''))
     return
@@ -100,6 +101,7 @@ async function onFile(e) {
     if (!blob) { toast('图片处理失败', 'err'); return }
     try { await saveWallpaperBlob(blob) } catch (err) { toast('壁纸保存失败：文件过大或存储空间不足', 'err'); return }
     swap(URL.createObjectURL(blob), 'image')
+    saveWallpaperThumb(blob)   // 首帧缩略图：下次刷新先用小图顶上，避免闪默认壁纸
     save()
     toast('壁纸已应用')
   } catch (err) {
@@ -110,6 +112,7 @@ async function onFile(e) {
 async function remove() {
   await clearWallpaperBlob().catch(() => {})
   swap(null, null)
+  clearWallpaperThumb()   // 同时移除首帧缓存与 <html> 上的内联背景变量
   save()
   toast('已恢复默认壁纸')
 }

@@ -183,6 +183,18 @@ export function confirmOk() {
   save()
 }
 export function confirmCancel() { ui.confirm.visible = false }
+/* 文件夹「彻底删除」：两次点击确认后，连同文件夹内的链接一起删除（常规删除仅解散、链接移出） */
+export function confirmPurge() {
+  const c = ui.confirm
+  if (c.kind !== 'folder') return
+  const fid = c.folderId
+  state.links = state.links.filter(l => l.folderId !== fid)
+  state.folders = state.folders.filter(x => x.id !== fid)
+  c.visible = false
+  closeFolder()
+  toast('文件夹及内部链接已删除')
+  save()
+}
 
 /* 删除确认入口（归入交互层：避免 folders/links 反向依赖 showConfirm 形成环） */
 export function deleteFolder(fid) {

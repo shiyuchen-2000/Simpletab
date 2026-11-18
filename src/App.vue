@@ -168,7 +168,9 @@ function onClick(e) {
     /* 空白关闭统一收口到这里（backdrop/cf 不再各自 @click.self 抢先触发）：
        表单打开时上方 linkForm 分支已先关表单并 return，此处不会误关文件夹——
        顺序即「先关添加弹窗，再点一次才关文件夹」。
-       点 backdrop 自身 / cf 空白 → 关文件夹；面板/磁贴等交互区 → 仅关右键菜单 */
+       右键菜单同理：打开时点任意非菜单区域先只关菜单，再点一次才关文件夹，
+       否则菜单会一直悬浮在关闭后的链接页上（links 分支没有关菜单的入口） */
+    if (ui.ctxMenu.visible) { closeCtx(); return }
     if (e.target.classList.contains('folder-backdrop')) { closeFolder(); return }
     if (isInteractiveHit(e)) { closeCtx(); return }
     closeFolder()

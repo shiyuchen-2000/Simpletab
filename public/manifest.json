@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extension_name__",
-  "version": "1.7.6",
+  "version": "1.7.7",
   "default_locale": "zh_CN",
   "description": "__MSG_extension_description__",
   "author": "史宇辰",
@@ -13,6 +13,8 @@
     "unlimitedStorage"
   ],
   "host_permissions": [
+    "http://*/*",
+    "https://*/*",
     "https://www.google.com/*",
     "https://*.gstatic.com/*",
     "https://*.gstatic.cn/*",

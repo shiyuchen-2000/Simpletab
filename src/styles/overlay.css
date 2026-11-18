@@ -67,7 +67,11 @@
 .confirm-box{width:min(340px,90vw);padding:1.4rem;border-radius:18px;text-align:center;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(24px);box-shadow:0 20px 60px rgba(0,0,0,.45);animation:zoomIn .25s var(--ease) both;}
 .confirm-box .c-t{font-weight:600;margin-bottom:.5rem;}
 .confirm-box .c-d{font-size:.85rem;color:var(--text-dim);margin-bottom:1.2rem;}
-.confirm-box .c-actions{display:flex;justify-content:center;gap:.7rem;}
+.confirm-box .c-actions{display:flex;justify-content:center;gap:.7rem;flex-wrap:wrap;}
+/* 按钮文字不压缩、不换行：文件夹确认框多了「彻底删除」，确认态文字变长时避免挤乱排版 */
+.confirm-box .c-actions .btn{flex:none;white-space:nowrap;}
+/* 带「彻底删除」的文件夹确认框适当加宽，窄屏仍自动换行 */
+.confirm-box:has(.c-purge){width:min(400px,92vw);}
 
 /* 手机式文件夹展开面板 */
 .folder-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:rgba(0,15,18,.4);}
@@ -83,6 +87,8 @@
 /* ============ 文件夹展开动画（设置 → 文件夹展开动画：正常缩放 / 3D 翻转） ============ */
 /* 翻转模式：面板沿 Z 轴 3D 翻转展开/收起（transform-origin 指向文件夹磁贴锚点）。
    时长 0.75s + 30° 翻转角，让"翻出"过程清晰可见；60% 处已完全不透明，翻转主体不受淡入掩盖 */
+/* 打开衔接：缩略卡先飞入（240ms），文件夹面板延迟 160ms 再从缩略卡位置展开 */
+body.folder-entering .folder-panel{animation-delay:.16s !important;}
 html[data-folder-anim="flip"] .folder-panel{animation:folderFlipIn .75s var(--ease) both;}
 html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:folderFlipOut .4s var(--ease) both;}
 @keyframes folderFlipIn{
@@ -94,6 +100,44 @@ html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:f
   from{opacity:1;transform:perspective(900px) rotateX(0) scale(1);}
   to{opacity:0;transform:perspective(900px) rotateX(30deg) scale(.85);}
 }
+/* 左上角三张缩略卡片堆叠（独立于面板动画，pointer-events:none） */
+.fp-mini-stack{
+  /* 独立 fixed 定位在面板左上角 45° 外侧（坐标由 FolderPanel 计算），不随面板动画 */
+  position:fixed;width:88px;height:88px;
+  pointer-events:none;z-index:2;
+}
+.fp-mini-card{
+  position:absolute;inset:0;box-sizing:border-box;
+  border-radius:20px;background:var(--glass-modal);border:1px solid var(--glass-border);
+  box-shadow:0 10px 28px rgba(0,0,0,.32);
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:13px;
+  transform-origin:center;
+  transition:transform .3s var(--ease),opacity .3s var(--ease);
+  will-change:transform,opacity;
+}
+/* 切换：统一只用 transform 过渡，避免 transform + scale/translate 多套变换叠加造成抽搐。
+   leave 元素的 z-index 压低，避免与新升到最前的卡片互相盖住闪烁 */
+.mini-leave-active{
+  transition:transform .3s var(--ease),opacity .3s var(--ease);
+  z-index:1 !important;
+}
+.mini-leave-to{opacity:0;transform:translate(-12px,14px) scale(.68) !important;}
+.mini-enter-active{
+  transition:transform .3s var(--ease),opacity .3s var(--ease);
+}
+.mini-enter-from{opacity:0;transform:translate(18px,-18px) scale(.82) !important;}
+.fp-mini-cell{
+  position:relative;border-radius:9px;overflow:hidden;
+  background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));
+  color:var(--accent-icon-text);display:grid;place-items:center;font-weight:600;
+}
+.fp-mini-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.fp-mini-add{
+  grid-column:1/-1;grid-row:1/-1;display:grid;place-items:center;
+  color:var(--text-faint);font-size:24px;
+}
+/* 窄屏左侧没有足够空间时隐藏，避免被视口裁切 */
+@media (max-width:860px){.fp-mini-stack{display:none;}}
 .fp-head{display:flex;flex:none;flex-wrap:wrap;align-items:center;gap:.7rem;margin-bottom:1.1rem;}
 .fp-head .fp-ico{display:flex;color:var(--accent-text);}
 .fp-head .fp-title{font-size:1.08rem;font-weight:600;color:var(--text);}
@@ -127,12 +171,11 @@ body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
   position:absolute;left:50%;top:50%;
   width:min(620px,92vw);height:auto;
   transform-origin:center;
-  transition:transform .55s var(--ease),opacity .55s var(--ease),filter .55s var(--ease);
-  will-change:transform,opacity,filter;
+  /* 左右预览已移除：位置/透明度变化立即生效，切换动画只由 .folder-panel 的入场动画负责，
+     避免 .cf-panel 过渡与入场动画叠加造成双重淡入/位移晃动 */
+  will-change:transform;
   backface-visibility:hidden;
 }
-/* 快速连续切换：大幅缩短过渡，动画直接到位不叠加卡顿 */
-.cf.fast .cf-panel{transition-duration:.12s !important;}
 /* 远处面板：轻量占位，保持滚筒进入/离开过渡的稳定尺寸（不渲染磁贴省 DOM） */
 .cf-blank{width:100%;min-height:44vh;}
 /* 两侧预览卡片：磨砂玻璃底 + 磁贴网格（网格不滚动，超出裁剪） */
@@ -141,7 +184,8 @@ body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
   display:flex;flex-direction:column;overflow:hidden;
   border-radius:24px;padding:1.4rem;
   background:var(--glass-strong);border:1px solid var(--glass-border);
-  backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);
+  /* 不做实时背景模糊：内容已由父级 .cf-panel 的 filter:blur(9px) 模糊，
+     去掉两块大尺寸 backdrop-filter，避免文件夹开关动画反复重建合成层 */
   box-shadow:0 26px 80px rgba(0,0,0,.45);
 }
 .cf-preview .fp-head{margin-bottom:1.1rem;}
