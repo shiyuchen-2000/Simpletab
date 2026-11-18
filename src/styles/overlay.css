@@ -110,7 +110,7 @@ html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:f
   position:absolute;inset:0;box-sizing:border-box;
   border-radius:20px;background:var(--glass-modal);border:1px solid var(--glass-border);
   box-shadow:0 10px 28px rgba(0,0,0,.32);
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:13px;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;padding:13px;
   transform-origin:center;
   transition:transform .3s var(--ease),opacity .3s var(--ease);
   will-change:transform,opacity;
@@ -132,6 +132,8 @@ html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:f
   color:var(--accent-icon-text);display:grid;place-items:center;font-weight:600;
 }
 .fp-mini-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+/* 有 favicon 时隐藏底层字母：与主界面磁贴一致，避免透明图标透出字母 */
+.fp-mini-cell:has(img) .fl{display:none;}
 .fp-mini-add{
   grid-column:1/-1;grid-row:1/-1;display:grid;place-items:center;
   color:var(--text-faint);font-size:24px;
