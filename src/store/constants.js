@@ -10,6 +10,8 @@ export const DEFAULT_ENGINES = [
   { key: 'sogou', name: '搜狗', url: 'https://www.sogou.com/web?query={q}' }
 ]
 export const WEEKS = ['日', '一', '二', '三', '四', '五', '六']
+/* 透明 1x1 GIF：拖拽时用作 setDragImage，隐藏浏览器默认拖拽镜像（避免"双层"图标） */
+export const EMPTY_DRAG_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 export const GENERIC_FONTS = ['sans-serif', 'serif', 'monospace', 'cursive', 'fantasy']
 export const FALLBACK_FONTS = [
   'system-ui', 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Segoe UI', 'Noto Sans SC', 'Source Han Sans SC',

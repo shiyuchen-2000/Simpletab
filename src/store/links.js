@@ -9,7 +9,7 @@ import { state, ui, toast } from './state'
 import { save } from './persistence'
 import { pruneEmptyFolders } from './folders'
 import { ensureFavicon, hostOf } from './faviconCache'
-import { uid, normalizeUrl, titleFromUrl } from './utils'
+import { uid, normalizeUrl, titleFromUrl, uniqueTitle } from './utils'
 import { fetchPageTitle } from './pageTitle'
 
 /* ---------- 链接增删改 ---------- */
@@ -98,10 +98,7 @@ export function saveForm() {
      优先用「＋新建文件夹」里输入的名称，否则默认「新文件夹」，重名自动加序号 */
   if (!url && !titleInput && ui.linkForm.mode === 'add') {
     const base = (ui.linkForm.folderSel === '__new' ? ui.linkForm.newFolder.trim() : '') || '新文件夹'
-    let i = 1
-    let ft = base
-    const names = new Set(state.folders.map(f => f.title))
-    while (names.has(ft)) { i++; ft = base + ' ' + i }
+    const ft = uniqueTitle(base, state.folders)
     state.folders.push({ id: uid(), title: ft })
     ui.linkForm.visible = false
     save()
@@ -211,10 +208,7 @@ export function mergeLinksToFolder(idA, idB) {
   const a = state.links.find(x => x.id === idA)
   const b = state.links.find(x => x.id === idB)
   if (!a || !b) return null
-  let i = 1
-  let title = '新文件夹'
-  const names = new Set(state.folders.map(f => f.title))
-  while (names.has(title)) { i++; title = '新文件夹 ' + i }
+  const title = uniqueTitle('新文件夹', state.folders)
   const f = { id: uid(), title }
   a.folderId = f.id
   b.folderId = f.id

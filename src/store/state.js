@@ -27,6 +27,7 @@ const DEFAULTS = {
   glassStrength: null, cardRadius: null, tileDensity: 'comfort', linkOpenIn: 'new', searchRadius: null,
   iconShape: 'rounded', iconSize: null, iconGlow: 50, tileHoverLift: 5, tileText: 'always', glassShine: true, tileEnter: 'drop', folderAnim: 'flip',
   wallpaperVignette: true, searchOpacity: 0.82, searchAnim: 'sink', searchSwap: false, searchSuggest: true, dockOpacity: 0.72, dockHoverLift: 6, dockName: true,
+  dockOrder: [],
   pinnedSettings: [],
   links: DEFAULT_LINKS, folders: DEFAULT_FOLDERS, customPresets: []
 }
@@ -44,6 +45,7 @@ export const DEFAULT_SETTINGS = {
   glassStrength: DEFAULTS.glassStrength, cardRadius: DEFAULTS.cardRadius, tileDensity: DEFAULTS.tileDensity, linkOpenIn: DEFAULTS.linkOpenIn, searchRadius: DEFAULTS.searchRadius,
   iconShape: DEFAULTS.iconShape, iconSize: DEFAULTS.iconSize, iconGlow: DEFAULTS.iconGlow, tileHoverLift: DEFAULTS.tileHoverLift, tileText: DEFAULTS.tileText, glassShine: DEFAULTS.glassShine, tileEnter: DEFAULTS.tileEnter, folderAnim: DEFAULTS.folderAnim,
   wallpaperVignette: DEFAULTS.wallpaperVignette, searchOpacity: DEFAULTS.searchOpacity, searchAnim: DEFAULTS.searchAnim, searchSwap: DEFAULTS.searchSwap, searchSuggest: DEFAULTS.searchSuggest, dockOpacity: DEFAULTS.dockOpacity, dockHoverLift: DEFAULTS.dockHoverLift, dockName: DEFAULTS.dockName,
+  dockOrder: [],
   pinnedSettings: []
 }
 

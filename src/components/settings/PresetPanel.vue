@@ -4,7 +4,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { state, ui, toast, saveCurrentAsPreset } from '../../store'
 import { themeOptions, styleOptions, posOptions, dateOptions, densityOptions, shapeOptions, tileTextOptions, searchAnimOptions } from '../../settings/config'
 
-const props = defineProps({ open: Boolean })
 const emit = defineEmits(['close'])
 
 const findOpt = (arr, key) => { const x = arr.find(a => a[0] === key); return x ? x[1] : '' }

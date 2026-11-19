@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
-import { state, ui, save, uid, toast, letterOf, openAddForm, deleteFolder, renameFolder, closeFolder, pruneEmptyFolders, openLinkUrl } from '../store'
+import { state, ui, save, uid, toast, letterOf, openAddForm, deleteFolder, renameFolder, pruneEmptyFolders, openLinkUrl, uniqueTitle, EMPTY_DRAG_IMAGE } from '../store'
 import { faviconSrc, isDarkIcon } from '../store/faviconCache'
+import { onImgError, onImgLoad, letterStyle } from './iconFallback'
+import { computeInsertIndex } from './dragInsert'
 import LetterIco from './LetterIco.vue'
 
 // 展示中的文件夹：打开时更新；关闭后保留引用直到退出动画结束，避免 v-if 立即卸载导致无动画
@@ -140,10 +142,7 @@ function showWheelHint() {
 }
 /* 新建空文件夹：生成不冲突名称，创建后聚焦打开 */
 function addFolder() {
-  let i = 1
-  let title = '新文件夹'
-  const names = new Set(state.folders.map(f => f.title))
-  while (names.has(title)) { i++; title = '新文件夹 ' + i }
+  const title = uniqueTitle('新文件夹', state.folders)
   const f = { id: uid(), title }
   state.folders.push(f)
   save()
@@ -270,7 +269,7 @@ let folderLastMove = 0
 let folderLastTarget = -1
 /* 透明拖拽镜像：隐藏浏览器默认 drag image，避免"双层"图标 */
 const folderEmptyImg = new Image()
-folderEmptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+folderEmptyImg.src = EMPTY_DRAG_IMAGE
 function startFolderLinkDrag(e, l) {
   e.dataTransfer.setData('text/link', l.id)
   e.dataTransfer.effectAllowed = 'move'
@@ -292,29 +291,6 @@ function endFolderLinkDrag(e) {
   }
   folderDragId.value = null
   clearDropLine()
-}
-function computeInsertIndex(container, clientX, clientY) {
-  const all = [...container.querySelectorAll('.tile:not(.add)')]
-  if (!all.length) return { tiles: all, index: 0 }
-  const rows = []
-  for (const t of all) {
-    const r = t.getBoundingClientRect()
-    let row = rows.find(rw => Math.abs(rw.top - r.top) < 4)
-    if (!row) { row = { top: r.top, bottom: r.bottom, items: [] }; rows.push(row) }
-    row.items.push({ el: t, rect: r })
-    row.bottom = Math.max(row.bottom, r.bottom)
-  }
-  rows.sort((a, b) => a.top - b.top)
-  let row = rows.find(rw => clientY >= rw.top && clientY <= rw.bottom)
-  if (!row) row = clientY < rows[0].top ? rows[0] : rows[rows.length - 1]
-  row.items.sort((a, b) => a.rect.left - b.rect.left)
-  let index = all.indexOf(row.items[0].el)
-  for (const it of row.items) {
-    const mid = it.rect.left + it.rect.width / 2
-    if (clientX >= mid) index = all.indexOf(it.el) + 1
-    else break
-  }
-  return { tiles: all, index }
 }
 function clearDropLine() { folderLastTarget = -1 }
 
@@ -375,25 +351,6 @@ onBeforeUnmount(() => {
 })
 
 function openLink(l) { openLinkUrl(l.url) }
-/* 磁贴图标：加载失败移除 img（露出字母兜底），成功隐藏底层字母（透明底图标不叠加） */
-function onImgError(e) {
-  const fl = e.target.closest('.t-ico, .dock-item')?.querySelector('.fl')
-  if (fl) fl.style.display = ''
-  e.target.remove()
-}
-function onImgLoad(e) {
-  const img = e.target
-  if (img.naturalWidth > 1 && img.naturalHeight > 1) {
-    const fl = img.closest('.t-ico, .dock-item')?.querySelector('.fl')
-    if (fl) fl.style.display = 'none'
-  } else {
-    img.remove()   // 1xN 之类坏图 cover 拉伸会显示成横/竖条，丢弃露出字母
-  }
-}
-/* 文字图标显示：text 模式强制显示，清除 auto 模式加载图标后残留的内联 display:none */
-function letterStyle(l) {
-  return l.iconMode === 'text' ? { display: '' } : {}
-}
 </script>
 
 <template>

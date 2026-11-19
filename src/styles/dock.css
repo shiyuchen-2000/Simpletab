@@ -28,6 +28,9 @@ body:not(.links-open) .dock.dock-visible{display:flex;}
 }
 /* 浮起 / 放大由 JS 按距离写入 --dock-lift / --dock-scale（支持邻居联动），hover 仅保留亮度 */
 .dock-item:hover{filter:brightness(1.08);will-change:transform;}
+/* 拖拽排序：拖动中降透明度，光标抓取态 */
+.dock-item[draggable="true"]{cursor:grab;}
+.dock-item.dragging,.dock-item.dragging:hover{opacity:.35;filter:brightness(.85);cursor:grabbing;}
 .dock-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.04);}
 .dock-item span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
 /* 拓展坞悬停名称：挂 body 层（避开拓展坞 overflow 裁切），定位在图标上方居中 */

@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { state, dockVisible, letterOf, openCtxAt, openLinkUrl } from '../store'
+import { state, dockVisible, letterOf, openCtxAt, openLinkUrl, save, dockListOrdered, moveDockLink, EMPTY_DRAG_IMAGE } from '../store'
 import { faviconSrc, isDarkIcon } from '../store/faviconCache'
+import { onImgError, onImgLoad } from './iconFallback'
 import LetterIco from './LetterIco.vue'
 
-const dockList = computed(() => state.links.filter(l => l.inDock).slice(0, state.dockCount || 7))
+const dockList = computed(() => dockListOrdered().slice(0, state.dockCount || 7))
 const visible = computed(() => dockVisible())
 const dockClass = computed(() => ({ 'dock-visible': visible.value }))
 
@@ -13,6 +14,7 @@ const dockClass = computed(() => ({ 'dock-visible': visible.value }))
 const dockRef = ref(null)
 const RANGE = 100     // 影响半径 px
 function onDockMove(e) {
+  if (dockDragId.value) return   // 拖拽排序中禁用浮起动画
   const items = dockRef.value?.children
   if (!items) return
   const lift = state.dockHoverLift ?? 6
@@ -36,38 +38,81 @@ function onDockLeave() {
 /* 悬停名称：挂到 body 层显示——拓展坞 overflow-x:auto 会裁切内部浮层，故用 Teleport 脱离 */
 const tip = ref(null)   // { text, x, y }
 function onItemEnter(e, l) {
+  if (dockDragId.value) { tip.value = null; return }   // 拖拽排序中不显示名称
   if (!state.dockName) { tip.value = null; return }
   const r = e.currentTarget.getBoundingClientRect()
   tip.value = { text: l.title, x: Math.round(r.left + r.width / 2), y: Math.round(r.top) }
 }
 function onItemLeave() { tip.value = null }
 
-function openLink(l) { openLinkUrl(l.url) }
+function openLink(l) {
+  if (Date.now() - dragEndedAt < 250) return   // 拖拽结束后的误触 click
+  openLinkUrl(l.url)
+}
+
+/* ---------- 拖拽排序：只改 state.dockOrder，链接页顺序不受影响 ---------- */
+const dockDragId = ref(null)
+const emptyDragImage = new Image()
+emptyDragImage.src = EMPTY_DRAG_IMAGE
+let dockOrderBefore = []
+let dockMoved = false
+let dockDropped = false
+let dockLastMove = 0
+let dragEndedAt = 0
+
+function onDockDragStart(e, l) {
+  e.dataTransfer.setData('text/dock', l.id)
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setDragImage(emptyDragImage, 0, 0)
+  dockDragId.value = l.id
+  dockOrderBefore = [...(state.dockOrder || [])]
+  dockMoved = false
+  dockDropped = false
+  dockLastMove = 0
+  tip.value = null
+  onDockLeave()   // 清掉拖拽前残留的浮起位移
+  e.currentTarget.classList.add('dragging')
+}
+function onDockDragOver(e, l) {
+  if (!e.dataTransfer.types.includes('text/dock') || !dockDragId.value || dockDragId.value === l.id) return
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  const now = Date.now()
+  if (now - dockLastMove < 50) return   // 触控板连续 dragover 节流
+  dockLastMove = now
+  const r = e.currentTarget.getBoundingClientRect()
+  if (moveDockLink(dockDragId.value, l.id, e.clientX > r.left + r.width / 2)) dockMoved = true
+}
+/* 拖到图标间隙（容器）也允许落位 */
+function onDockAreaDragOver(e) {
+  if (dockDragId.value) e.preventDefault()
+}
+function onDockDrop(e) {
+  if (!dockDragId.value) return
+  e.preventDefault()
+  dockDropped = true
+}
+function onDockDragEnd(e) {
+  e.currentTarget?.classList.remove('dragging')
+  if (!dockDropped && dockMoved) state.dockOrder = dockOrderBefore   // Esc / 拖出：恢复原顺序
+  dockDragId.value = null
+  dockMoved = false
+  dragEndedAt = Date.now()
+  if (dockDropped) { dockDropped = false; save() }
+}
 function onItemCtx(e, l) {
   e.preventDefault(); e.stopPropagation()
   openCtxAt(e, [{ act: 'confirm-undock', label: '从拓展坞删除', icon: 'pin' }], l.id, false)
 }
-/* 拓展坞图标：加载失败移除 img（露出字母兜底），成功隐藏底层字母（透明底图标不叠加） */
-function onImgError(e) {
-  const fl = e.target.closest('.t-ico, .dock-item')?.querySelector('.fl')
-  if (fl) fl.style.display = ''
-  e.target.remove()
-}
-function onImgLoad(e) {
-  const img = e.target
-  if (img.naturalWidth > 1 && img.naturalHeight > 1) {
-    const fl = img.closest('.t-ico, .dock-item')?.querySelector('.fl')
-    if (fl) fl.style.display = 'none'
-  } else {
-    img.remove()   // 1xN 之类坏图 cover 拉伸会显示成横/竖条，丢弃露出字母
-  }
-}
 </script>
 
 <template>
-  <div class="dock" ref="dockRef" :class="dockClass" @mousemove="onDockMove" @mouseleave="onDockLeave">
-    <div v-for="l in dockList" :key="l.id" class="dock-item" :data-ic="l.iconMode"
+  <div class="dock" ref="dockRef" :class="dockClass" @mousemove="onDockMove" @mouseleave="onDockLeave"
+       @dragover="onDockAreaDragOver" @drop="onDockDrop">
+    <div v-for="l in dockList" :key="l.id" class="dock-item" :data-id="l.id" :data-ic="l.iconMode" draggable="true"
+         :class="{ dragging: dockDragId === l.id }"
          @click="openLink(l)" @contextmenu="onItemCtx($event, l)"
+         @dragstart="onDockDragStart($event, l)" @dragover="onDockDragOver($event, l)" @dragend="onDockDragEnd"
          @mouseenter="onItemEnter($event, l)" @mouseleave="onItemLeave">
       <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" :class="{ 'dark-icon': isDarkIcon(l.url) }" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            @error="onImgError" @load="onImgLoad">

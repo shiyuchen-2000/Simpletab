@@ -28,7 +28,8 @@ export function resetSettings() {
     iconShape: DEFAULT_SETTINGS.iconShape, iconSize: DEFAULT_SETTINGS.iconSize, iconGlow: DEFAULT_SETTINGS.iconGlow, tileHoverLift: DEFAULT_SETTINGS.tileHoverLift, tileText: DEFAULT_SETTINGS.tileText, glassShine: DEFAULT_SETTINGS.glassShine, tileEnter: DEFAULT_SETTINGS.tileEnter, folderAnim: DEFAULT_SETTINGS.folderAnim,
     wallpaperVignette: DEFAULT_SETTINGS.wallpaperVignette,
     searchOpacity: DEFAULT_SETTINGS.searchOpacity, searchAnim: DEFAULT_SETTINGS.searchAnim, searchSwap: DEFAULT_SETTINGS.searchSwap, searchSuggest: DEFAULT_SETTINGS.searchSuggest, dockOpacity: DEFAULT_SETTINGS.dockOpacity, dockHoverLift: DEFAULT_SETTINGS.dockHoverLift, dockName: DEFAULT_SETTINGS.dockName,
-    pinnedSettings: []
+    pinnedSettings: [],
+    dockOrder: []
   })
   /* 重置设置同时清掉 IndexedDB 壁纸，并释放本页 objectURL。
      video 元素正在解码时立即 revoke 会报 Failed to load resource，故延迟 1s 释放 */

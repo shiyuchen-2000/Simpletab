@@ -177,18 +177,6 @@ body:not(.tile-text-hover):not(.tile-text-none) .fp-grid .tile.add{
 }
 /* 远处面板：轻量占位，保持滚筒进入/离开过渡的稳定尺寸（不渲染磁贴省 DOM） */
 .cf-blank{width:100%;min-height:44vh;}
-/* 两侧预览卡片：磨砂玻璃底 + 磁贴网格（网格不滚动，超出裁剪） */
-.cf-preview{
-  width:100%;max-height:84vh;
-  display:flex;flex-direction:column;overflow:hidden;
-  border-radius:24px;padding:1.4rem;
-  background:var(--glass-strong);border:1px solid var(--glass-border);
-  /* 不做实时背景模糊：内容已由父级 .cf-panel 的 filter:blur(9px) 模糊，
-     去掉两块大尺寸 backdrop-filter，避免文件夹开关动画反复重建合成层 */
-  box-shadow:0 26px 80px rgba(0,0,0,.45);
-}
-.cf-preview .fp-head{margin-bottom:1.1rem;}
-.cf-grid{flex-wrap:wrap;gap:14px;justify-content:center;align-content:flex-start;overflow:hidden;}
 /* 左右切换按钮：竖直长条（约与文件夹等高），无边框无底色（裸图标）。
    hover 光效：内侧（朝向文件夹一侧）一条边界线（inset 内阴影），
    外侧 + 上/下 三边无边界发散光晕（外阴影）——按钮主体保持透明 */

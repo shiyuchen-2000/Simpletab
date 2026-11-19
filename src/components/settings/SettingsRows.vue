@@ -211,9 +211,6 @@ function toggle(field) {
         <button v-for="[v, label] in styleOptions" :key="v" :class="{ on: state.style === v }" @click="setStyle(v)">{{ label }}</button>
       </div>
     </div>
-    <!-- Fluent 风格提示：独立整行，避免长文字挤压 seg 控件宽度导致换行错位 -->
-    <p v-else-if="r.id === 'style' && state.style === 'fluent'" class="style-hint">Fluent 风格下，材质与质感设置将固定为 Fluent 规范值（置灰不可调）</p>
-    <p v-else-if="r.id === 'style' && state.style === 'borderless'" class="style-hint">无界风格下，卡片与毛玻璃将隐藏，仅保留图标与名称（相关材质设置置灰不可调）</p>
     <!-- 主题色 -->
     <div v-else-if="r.id === 'accentColor'" class="set-row" style="align-items:flex-start;">
       <div><div class="r-t">主题色</div><div class="r-d">自定义强调色，按钮 / 图标 / 文字自动适配</div></div>
@@ -333,7 +330,6 @@ function toggle(field) {
 .accent-swatch:hover{transform:scale(1.15);box-shadow:0 3px 8px rgba(0,0,0,.25);}
 .accent-swatch.on{outline:2px solid var(--text);outline-offset:2px;}
 /* Fluent 风格提示：独立整行，不挤压 seg 控件宽度 */
-.style-hint{font-size:.76rem;color:var(--text-faint);line-height:1.5;padding:.35rem .2rem .5rem;border-top:1px dashed var(--glass-border);}
 /* 页面布局调整提示：红色弱提示，提醒元素可能存在遮挡 */
 .layout-warn{font-size:.68rem;font-weight:400;color:#ff8a94;margin-left:.4rem;vertical-align:1px;}
 .layout-actions{display:flex;align-items:center;gap:.5rem;flex:none;}

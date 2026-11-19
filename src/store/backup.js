@@ -75,6 +75,11 @@ export function applyImport(data, opts = { settings: true, links: true }) {
         state.engines = cleaned.length ? cleaned : DEFAULT_ENGINES
         continue
       }
+      /* 拓展坞顺序只接受字符串 id 数组，避免畸形数据破坏渲染 */
+      if (k === 'dockOrder') {
+        state.dockOrder = Array.isArray(s[k]) ? s[k].filter(x => typeof x === 'string') : []
+        continue
+      }
       state[k] = s[k]
     }
     /* 导入的当前引擎键必须存在于清洗后的 engines，否则回落第一个 */

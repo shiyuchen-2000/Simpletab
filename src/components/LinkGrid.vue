@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { state, ui, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl, mergeLinksToFolder } from '../store'
+import { state, ui, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl, mergeLinksToFolder, EMPTY_DRAG_IMAGE } from '../store'
 import { faviconSrc, isDarkIcon } from '../store/faviconCache'
+import { onImgError as onTileImgError, onImgLoad as onTileImgLoad, letterStyle } from './iconFallback'
+import { computeInsertIndex } from './dragInsert'
 import LetterIco from './LetterIco.vue'
 
 const areaRef = ref(null)
@@ -12,32 +14,13 @@ const pendingFolder = ref(null)   // 待生成文件夹（图标消失动画结�
 const dropTargetIdx = ref(-1)   // 拖拽目标插入位（B：拖动中记录，松手时按此换位落位）
 /* 透明拖拽镜像：隐藏浏览器默认 drag image，避免与被拖图标实时移动造成"双层" */
 const emptyDragImage = new Image()
-emptyDragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+emptyDragImage.src = EMPTY_DRAG_IMAGE
 
 const rootLinks = computed(() => state.links.filter(l => l && typeof l === 'object' && !l.folderId))
 const folderLinks = fid => state.links.filter(l => l && typeof l === 'object' && l.folderId === fid)
 
 function openLink(l) { openLinkUrl(l.url) }
 
-/* 磁贴图标：加载失败移除 img（露出字母兜底），成功隐藏底层字母（透明底图标不叠加） */
-function onTileImgError(e) {
-  const fl = e.target.closest('.t-ico, .dock-item')?.querySelector('.fl')
-  if (fl) fl.style.display = ''
-  e.target.remove()
-}
-function onTileImgLoad(e) {
-  const img = e.target
-  if (img.naturalWidth > 1 && img.naturalHeight > 1) {
-    const fl = img.closest('.t-ico, .dock-item')?.querySelector('.fl')
-    if (fl) fl.style.display = 'none'
-  } else {
-    img.remove()   // 1xN 之类坏图 cover 拉伸会显示成横/竖条，丢弃露出字母
-  }
-}
-/* 文字图标显示：text 模式强制显示，清除 auto 模式加载图标后残留的内联 display:none */
-function letterStyle(l) {
-  return l.iconMode === 'text' ? { display: '' } : {}
-}
 function folderMinis(fid) {
   return folderLinks(fid).slice(0, 4)
 }
@@ -130,9 +113,10 @@ function onLinkDragover(e, l) {
 }
 function onLinkDragleave(e, l) {
   if (mergeTargetId.value !== l.id) return
-  /* 仅当真正离开磁贴区（relatedTarget 不在任何磁贴内）才取消预览，避免子元素抖动 */
-  const rt = e.relatedTarget
-  if (!rt || !rt.closest || !rt.closest('.link-area .tile[data-id]')) mergeTargetId.value = null
+  /* 拖拽时 relatedTarget 常指向拖拽源磁贴（也是 .tile），不能据此判断"仍在磁贴区"；
+     只忽略仍在当前磁贴内部子元素间移动的情况，其余一律取消预览 */
+  if (e.currentTarget.contains(e.relatedTarget)) return
+  mergeTargetId.value = null
 }
 function onLinkDrop(e, l) {
   const lid = e.dataTransfer.getData('text/link')
@@ -182,36 +166,6 @@ function onFolderDrop(e, fid) {
   }
 }
 /* ---------- 区域放置：拖拽换位（B：拖动中记录目标位，松手一次性落位 + 动画） ---------- */
-// 在 flex-wrap 磁贴中，按"先定位行、再定位列"计算插入索引，避免跨行误判
-function computeInsertIndex(container, clientX, clientY) {
-  const all = [...container.querySelectorAll('.tile:not(.add)')]
-  if (!all.length) return { tiles: all, index: 0 }
-  // 按视觉顶部分行（容差 4px）
-  const rows = []
-  for (const t of all) {
-    const r = t.getBoundingClientRect()
-    let row = rows.find(rw => Math.abs(rw.top - r.top) < 4)
-    if (!row) { row = { top: r.top, bottom: r.bottom, items: [] }; rows.push(row) }
-    row.items.push({ el: t, rect: r })
-    row.bottom = Math.max(row.bottom, r.bottom)
-  }
-  rows.sort((a, b) => a.top - b.top)
-  // 找到鼠标所在行
-  let row = rows.find(rw => clientY >= rw.top && clientY <= rw.bottom)
-  if (!row) {
-    // 在两行之间或区域外：靠近哪行归哪行；在所有行之上取首行，之下取末行
-    row = clientY < rows[0].top ? rows[0] : rows[rows.length - 1]
-  }
-  row.items.sort((a, b) => a.rect.left - b.rect.left)
-  // 行内：按磁贴中点判断落在它之前还是之后
-  let index = all.indexOf(row.items[0].el)
-  for (const it of row.items) {
-    const mid = it.rect.left + it.rect.width / 2
-    if (clientX >= mid) index = all.indexOf(it.el) + 1
-    else break
-  }
-  return { tiles: all, index }
-}
 function clearDropFx() {
   dropTargetIdx.value = -1
   mergeTargetId.value = null

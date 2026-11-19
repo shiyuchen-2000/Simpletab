@@ -18,6 +18,14 @@ export const normalizeUrl = v => {
     return u.href
   } catch (e) { return null }
 }
+/* 生成不与现有文件夹重名的标题：base、base 2、base 3… */
+export function uniqueTitle(base, folders) {
+  const names = new Set(folders.map(f => f.title))
+  let i = 1
+  let title = base
+  while (names.has(title)) { i++; title = base + ' ' + i }
+  return title
+}
 /* 从网址生成兜底标题：优先保留用户原始输入里的中文域名（浏览器 URL 会把中文
    规范化为 Punycode，如 百度.com → xn--wxtr44c.com，直接取 hostname 会得到乱码）；
    纯 ASCII 时沿用原规则：取首段、连字符转空格、首字母大写 */
