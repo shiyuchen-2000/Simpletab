@@ -77,8 +77,49 @@ function evictHalf() {
   const list = Object.entries(cache.value).sort((a, b) => a[1].t - b[1].t)
   list.slice(0, Math.ceil(list.length / 2)).forEach(([h]) => { delete cache.value[h] })
 }
+/* 图标明暗分析：采样不透明像素，判断是否为「深色单色图标」（如 GitHub #24292E）。
+   这类图标在暗色主题的近黑底托上几乎看不见，渲染时加 .dark-icon 反色 */
+function analyzeIcon(dataURL) {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const size = 32
+        const c = document.createElement('canvas')
+        c.width = size; c.height = size
+        const ctx = c.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(img, 0, 0, size, size)
+        const d = ctx.getImageData(0, 0, size, size).data
+        let n = 0, sumL = 0, sumS = 0
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 24) continue   // 忽略透明像素
+          const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255
+          const max = Math.max(r, g, b), min = Math.min(r, g, b)
+          sumL += 0.2126 * r + 0.7152 * g + 0.0722 * b
+          sumS += max === 0 ? 0 : (max - min) / max
+          n++
+        }
+        if (!n) return resolve(false)
+        resolve(sumL / n < 0.35 && sumS / n < 0.3)
+      } catch (e) { resolve(false) }
+    }
+    img.onerror = () => resolve(false)
+    img.src = dataURL
+  })
+}
+/* 同步查询：该网址的图标是否深色单色（供组件加 .dark-icon） */
+export function isDarkIcon(url) {
+  const host = hostOf(url)
+  const hit = host ? cache.value[host] : null
+  return !!(hit && hit.dark)
+}
 function setCache(host, dataURL) {
   cache.value[host] = { data: dataURL, t: Date.now() }
+  analyzeIcon(dataURL).then(dark => {
+    const item = cache.value[host]
+    /* 图标可能已被同一 host 的新结果替换，避免旧分析覆盖新图 */
+    if (item && item.data === dataURL) { item.dark = dark; scheduleSave() }
+  })
   trimCache()
   scheduleSave()
 }
@@ -135,10 +176,23 @@ export async function loadFaviconCache() {
       for (const [host, v] of Object.entries(map)) {
         // 只接受合法结构，防脏数据
         if (v && typeof v.data === 'string' && v.data.startsWith('data:image/')) {
-          cache.value[host] = { data: v.data, t: v.t || 0 }
+          cache.value[host] = { data: v.data, t: v.t || 0, dark: v.dark }
         }
       }
       trimCache()
+      /* 旧缓存没有 dark 标记：延后分批分析，避免阻塞启动 */
+      const pending = Object.entries(cache.value).filter(([, v]) => v.dark === undefined)
+      let pi = 0
+      const step = () => {
+        const item = pending[pi++]
+        if (!item) return
+        const [host, v] = item
+        analyzeIcon(v.data).then(dark => {
+          const cur = cache.value[host]
+          if (cur && cur.data === v.data) { cur.dark = dark; scheduleSave() }
+        }).finally(() => setTimeout(step, 0))
+      }
+      setTimeout(step, 200)
     }
   } catch (e) { /* 读取失败按无缓存处理 */ }
 }

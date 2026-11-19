@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { state, ui, save, uid, toast, letterOf, openAddForm, deleteFolder, renameFolder, closeFolder, pruneEmptyFolders, openLinkUrl } from '../store'
-import { faviconSrc } from '../store/faviconCache'
+import { faviconSrc, isDarkIcon } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 // 展示中的文件夹：打开时更新；关闭后保留引用直到退出动画结束，避免 v-if 立即卸载导致无动画
@@ -407,7 +407,7 @@ function letterStyle(l) {
             <div v-for="l in m.links" :key="l.id" class="fp-mini-cell">
               <!-- 与主界面一致：文字图标只显示字母；原始图标才加载 favicon -->
               <LetterIco :letter="letterOf(l.title)" />
-              <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+              <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" :class="{ 'dark-icon': isDarkIcon(l.url) }" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
                    @error="e => e.target.remove()">
             </div>
           </template>
@@ -445,7 +445,7 @@ function letterStyle(l) {
                  @dragstart="startFolderLinkDrag($event, l)"
                  @dragend="endFolderLinkDrag($event)">
               <div class="t-ico" :data-ic="l.iconMode">
-                <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" :class="{ 'dark-icon': isDarkIcon(l.url) }" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
                      @error="onImgError" @load="onImgLoad">
                 <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
               </div>

@@ -3,7 +3,7 @@
    下方空间不足或与时钟 / 拓展坞重叠时自动翻到上方 */
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { letterOf } from '../store'
-import { faviconSrc } from '../store/faviconCache'
+import { faviconSrc, isDarkIcon } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 const props = defineProps({
@@ -86,6 +86,7 @@ onBeforeUnmount(() => {
             @click="$emit('pick', item)">
       <span class="sg-ico">
         <img v-if="item.link.iconMode !== 'text' && faviconSrc(item.link.url)" :src="faviconSrc(item.link.url)"
+             :class="{ 'dark-icon': isDarkIcon(item.link.url) }"
              alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" @error="onImgError">
         <LetterIco :letter="letterOf(item.link.title)" />
       </span>

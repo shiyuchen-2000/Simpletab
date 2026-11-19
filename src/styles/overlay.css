@@ -112,20 +112,17 @@ html[data-folder-anim="flip"] .folder-backdrop.closing .folder-panel{animation:f
   box-shadow:0 10px 28px rgba(0,0,0,.32);
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;padding:13px;
   transform-origin:center;
-  transition:transform .3s var(--ease),opacity .3s var(--ease);
+  /* opacity 不做过渡：深度变化时立即到位，避免两张半透明卡片交叉淡入淡出叠加发白 */
+  transition:transform .22s var(--ease);
   will-change:transform,opacity;
 }
-/* 切换：统一只用 transform 过渡，避免 transform + scale/translate 多套变换叠加造成抽搐。
-   leave 元素的 z-index 压低，避免与新升到最前的卡片互相盖住闪烁 */
-.mini-leave-active{
-  transition:transform .3s var(--ease),opacity .3s var(--ease);
-  z-index:1 !important;
-}
-.mini-leave-to{opacity:0;transform:translate(-12px,14px) scale(.68) !important;}
+/* 切换：新卡直接以最终不透明度出现，旧卡在其下方快速淡出，后面的卡平滑前移补位 */
+.mini-leave-active{transition:opacity .12s ease;z-index:0 !important;}
+.mini-leave-to{opacity:0;}
 .mini-enter-active{
-  transition:transform .3s var(--ease),opacity .3s var(--ease);
+  transition:transform .22s var(--ease);
 }
-.mini-enter-from{opacity:0;transform:translate(18px,-18px) scale(.82) !important;}
+.mini-enter-from{transform:translate(14px,-14px) scale(.86) !important;}
 .fp-mini-cell{
   position:relative;border-radius:9px;overflow:hidden;
   background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));

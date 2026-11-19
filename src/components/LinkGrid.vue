@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { state, ui, save, toast, letterOf, openFolder, openAddForm, pruneEmptyFolders, openLinkUrl, mergeLinksToFolder } from '../store'
-import { faviconSrc } from '../store/faviconCache'
+import { faviconSrc, isDarkIcon } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 const areaRef = ref(null)
@@ -431,7 +431,7 @@ function onAreaDrop(e) {
          @dragover="onLinkDragover($event, l)" @dragleave="onLinkDragleave($event, l)"
          @drop="onLinkDrop($event, l)">
       <div class="t-ico" :data-ic="l.iconMode">
-        <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+        <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" :class="{ 'dark-icon': isDarkIcon(l.url) }" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              @error="onTileImgError" @load="onTileImgLoad">
         <LetterIco :letter="letterOf(l.title)" :style="letterStyle(l)" />
       </div>

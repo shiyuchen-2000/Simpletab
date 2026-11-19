@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { state, dockVisible, letterOf, openCtxAt, openLinkUrl } from '../store'
-import { faviconSrc } from '../store/faviconCache'
+import { faviconSrc, isDarkIcon } from '../store/faviconCache'
 import LetterIco from './LetterIco.vue'
 
 const dockList = computed(() => state.links.filter(l => l.inDock).slice(0, state.dockCount || 7))
@@ -69,7 +69,7 @@ function onImgLoad(e) {
     <div v-for="l in dockList" :key="l.id" class="dock-item" :data-ic="l.iconMode"
          @click="openLink(l)" @contextmenu="onItemCtx($event, l)"
          @mouseenter="onItemEnter($event, l)" @mouseleave="onItemLeave">
-      <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+      <img v-if="l.iconMode !== 'text' && faviconSrc(l.url)" :src="faviconSrc(l.url)" :class="{ 'dark-icon': isDarkIcon(l.url) }" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            @error="onImgError" @load="onImgLoad">
       <LetterIco :letter="letterOf(l.title)" />
     </div>

@@ -140,6 +140,13 @@ body.no-tile-hover .tile:hover,body.no-tile-hover .tile:active{transform:none;}
 .tile .t-ico{width:var(--tile-ico,46px);height:var(--tile-ico,46px);border-radius:var(--ico-radius,calc(13px * var(--radius-scale,1)));overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile-ico,46px) * .46);font-weight:600;color:var(--accent-icon-text);background:linear-gradient(135deg,var(--accent-grad-a),var(--accent-grad-b));box-shadow:0 6px 16px rgba(var(--accent-rgb),var(--tile-glow,.3));position:relative;}
 /* img 轻微放大：favicon 从 16px 非整数倍放大到 cover 时边缘会有 1px 采样色带，放大后由 overflow:hidden 裁掉 */
 .tile .t-ico img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.04);z-index:2;}
+/* 深色单色图标（如 GitHub #24292E）在暗色主题的近黑底托上几乎不可见，反色成浅色 */
+[data-theme="dark"] .tile .t-ico img.dark-icon,
+[data-theme="dark"] .dock-item img.dark-icon,
+[data-theme="dark"] .sg-ico img.dark-icon,
+[data-theme="dark"] .fp-mini-cell img.dark-icon{
+  filter:invert(1) brightness(1.15);
+}
 /* 图标淡入：本地缓存命中或"字母→图标"切换时更平滑（prefers-reduced-motion 下全局关闭动画） */
 @keyframes faviconIn{from{opacity:0;}to{opacity:1;}}
 .tile .t-ico img,.dock-item img{animation:faviconIn .16s ease;}
