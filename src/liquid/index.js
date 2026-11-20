@@ -4,12 +4,26 @@
 // 副作用：MutationObserver 跟踪元素增删 + 风格切换
 // 链接页整体大背景不走折射，由 styles/liquid.css 直接改 .bg 的材质滤镜
 // ============================================================
-import { liquidGlass } from './lens'
+import { liquidGlass, isLensSupported } from './lens'
+
+/* 不支持 SVG 折射的浏览器（Firefox 等）不进入"0 宽等待"，搜索框直接显示 */
+if (typeof document !== 'undefined' && !isLensSupported()) {
+  document.documentElement.dataset.lensUnsupported = '1'
+}
+/* 材质生成失败或过慢时兜底：2.2s 后强制展开，避免搜索框一直隐藏 */
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    document.querySelectorAll('.search-bar').forEach(el => {
+      if (!el.hasAttribute('data-lens-ready')) el.dataset.lensReady = ''
+    })
+  }, 2200)
+}
 
 // 需要边缘折射的表面：搜索框 / 拓展坞 / 链接页整页玻璃层
 const TARGETS = [
-  // 搜索框：Lumno 默认材质（边宽 40px，边缘偏移 1.1 倍，衰减 2.6，色散 15%）
-  { selector: '.search-bar', options: { rim: 40, edge: 1.1, power: 2.6, dispersion: 0.15 } },
+  // 搜索框：薄玻璃材质（边宽 48px，边缘偏移 1.2 倍，衰减 2.2，色散 20%），
+  // 折射范围更宽、更明显，配合更低的底色不透明度
+  { selector: '.search-bar', options: { rim: 48, edge: 1.2, power: 2.2, dispersion: 0.2 } },
   // 拓展坞：固定边宽 18px，避免 hover 长高时反复重建滤镜
   { selector: '.dock', options: { rim: 18, edge: 1.1, power: 2.6, dispersion: 0.15 } },
   // 设置下拉列表：小面板用整张位移图（fullMap），避免九宫格拼接的接缝竖线；

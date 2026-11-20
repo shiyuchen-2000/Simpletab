@@ -11,7 +11,7 @@
  * 仅 Chromium 绘制 backdrop-filter: url(#…)，其他浏览器解析后不绘制，
  * 玻璃退回纯 CSS 效果。贴图见 lens-map.js。
  */
-import { LENS_MIN_PX, ROUND_CORNER, cornerExponent, fullMap, lensLayout, lensTiles } from './lens-map'
+import { LENS_MIN_PX, ROUND_CORNER, cornerExponent, fullMap, lensPlacement, lensTiles } from './lens-map'
 
 export const LENS_DEFAULTS = {
   // 边宽上限（px）。小尺寸表面会自动缩到短边的 1/3.5，保留平整中区
@@ -79,7 +79,7 @@ function buildFilter(width, height, tiles, split, fullMap) {
       href: tiles.url, preserveAspectRatio: 'none', x: 0, y: 0, width, height, result: 't0',
     }, filter)]
   } else {
-    rects = lensLayout(width, height, tiles.size)
+    rects = lensPlacement(width, height, tiles.size)
     pieces = rects.map(([x, y, w, h], index) => node('feImage', {
       href: tiles.urls[index], preserveAspectRatio: 'none', x, y, width: w, height: h, result: `t${index}`,
     }, filter))
@@ -123,7 +123,7 @@ function placeFilter(lens, width, height) {
     piece.setAttribute('height', height)
     return
   }
-  lensLayout(width, height, lens.tiles.size).forEach(([x, y, w, h], index) => {
+  lensPlacement(width, height, lens.tiles.size).forEach(([x, y, w, h], index) => {
     const piece = lens.pieces[index]
     piece.setAttribute('x', x)
     piece.setAttribute('y', y)
@@ -142,6 +142,7 @@ export function liquidGlass(el, options = {}) {
   let opts = { ...LENS_DEFAULTS, ...options }
   const supported = isLensSupported()
   let current = null // { key, lens, width, height }
+  let readyMarked = false
   let token = 0
   let frame = 0
   let lastChange = 0
@@ -237,6 +238,13 @@ export function liquidGlass(el, options = {}) {
     const previous = current
     current = { key, lens, width, height }
     el.style.setProperty(opts.property, `url(#${lens.id})`)
+    /* 材质就绪：先等滤镜实际绘制两帧再标记，避免搜索框先以无折射底色展开、
+       液态玻璃随后才出现的"黑底展开"观感 */
+    if (!readyMarked) {
+      readyMarked = true
+      const mark = () => { if (el.isConnected) el.dataset.lensReady = '' }
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(mark, 80)))
+    }
     // 让新滤镜先绘制，再移除旧滤镜
     if (previous) requestAnimationFrame(() => requestAnimationFrame(() => previous.lens.host.remove()))
   }

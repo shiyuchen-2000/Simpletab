@@ -39,6 +39,85 @@ html[data-style="glass"] .search-bar::before {
   -webkit-backdrop-filter: var(--liquid-filter) var(--glass-lens,);
 }
 
+/* 搜索框透明玻璃：去掉 blur（磨砂感来源），保留高透明，
+   用材质 brightness 轻微压暗、saturate 微提鲜，再叠一层极淡主题色着色。 */
+html[data-style="glass"] .search-bar {
+  scale:1;
+  --liquid-filter: saturate(1.05) brightness(.96);
+  --search-tint: rgba(var(--accent-rgb), .035);
+  --search-glass: rgba(255,246,238, calc(var(--search-alpha) * .22));
+  background:
+    linear-gradient(180deg, rgba(255,248,240,.14), rgba(255,248,240,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+  /* 高透明玻璃下白色描边在浅壁纸上会消失，亮色改用深青描边 */
+  border-color: rgba(13,43,46,.26);
+}
+/* hover/focus 必须显式重写 background：search.css 的同名规则特异性高于
+   亮色基础规则（暗色基础规则多了 [data-theme] 才幸免），否则会退回 0.8~0.9 实底 */
+html[data-style="glass"] .search-bar:hover:not(.no-expand) {
+  --search-glass: rgba(255,246,238, calc(var(--search-alpha) * .22 + .03));
+  background:
+    linear-gradient(180deg, rgba(255,248,240,.14), rgba(255,248,240,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+}
+html[data-style="glass"] .search-bar:focus-within:not(.no-expand) {
+  --search-glass: rgba(255,246,238, calc(var(--search-alpha) * .22 + .05));
+  background:
+    linear-gradient(180deg, rgba(255,248,240,.14), rgba(255,248,240,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+  /* 聚焦时边框本身也过渡到强调色，失焦后平滑回到普通描边，
+     避免 accent 外圈淡出时底下那条描边"突然出现" */
+  border-color: rgba(var(--accent-rgb), .5);
+}
+html[data-style="glass"][data-theme="dark"] .search-bar {
+  --liquid-filter: saturate(1.05) brightness(.9);
+  --search-tint: rgba(var(--accent-rgb), .05);
+  --search-glass: rgba(6,16,22, calc(var(--search-alpha) * .28));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+  border-color: rgba(255,255,255,.3);
+}
+html[data-style="glass"][data-theme="dark"] .search-bar:hover:not(.no-expand) {
+  --search-glass: rgba(6,16,22, calc(var(--search-alpha) * .28 + .03));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+}
+html[data-style="glass"][data-theme="dark"] .search-bar:focus-within:not(.no-expand) {
+  --search-glass: rgba(6,16,22, calc(var(--search-alpha) * .28 + .05));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+    linear-gradient(var(--search-tint), var(--search-tint)),
+    var(--search-glass);
+  border-color: rgba(var(--accent-rgb), .6);
+}
+/* hover 描边：透明玻璃下背景提亮只差 0.03，用对比色给出明确反馈。
+   不限定 :not(.no-expand)，无展开位的场景也能看到。 */
+html[data-style="glass"] .search-bar:hover {
+  border-color: rgba(13,43,46,.42);
+}
+html[data-style="glass"][data-theme="dark"] .search-bar:hover {
+  border-color: rgba(255,255,255,.5);
+}
+
+/* 首屏入场：材质（SVG 折射）就绪前，搜索框水平收起且不可交互。
+   注意不能用 width:0：折射贴图按元素尺寸生成，宽度 0 会让搜索框的材质永远
+   跳过生成、只能等兜底。因此保持布局宽度，用独立 scale 做视觉收起；
+   材质就绪后 lens.js 写入 data-lens-ready，本规则失效，scale/透明度平滑恢复。
+   不支持折射的浏览器（data-lens-unsupported）不参与等待，直接显示。 */
+html[data-style="glass"]:not([data-lens-unsupported]) .search-bar:not([data-lens-ready]){
+  /* 只用 scaleX 收起：scaleX(0) 本身不可见，不需要 opacity 动画。
+     opacity 过渡会让 Chromium 延迟渲染 backdrop-filter，导致先看到纯底色 */
+  scale:0 1;
+  pointer-events:none;
+}
+
 /* 设置下拉列表（齿轮菜单）：液态玻璃 + 边缘透镜。
    原 --glass-strong（约 72% 白）会把折射盖住，这里换成薄着色，
    让边缘弯折的背景真正透出来 */

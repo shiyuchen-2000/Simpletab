@@ -151,9 +151,12 @@ function onClick(e) {
     return
   }
   if (state.view !== 'links') {
-    /* 主页：拓展坞图标右键菜单打开时，点空白关闭——否则菜单卡住无法收起
+    /* 主页：拓展坞右键菜单 / 设置下拉打开时，点空白关闭——否则浮层卡住无法收起
        （links 页点空白走 setView('home') 会顺带关菜单，主页无此路径） */
-    if (ui.ctxMenu.visible && !isInteractiveHit(e)) closeCtx()
+    if (!isInteractiveHit(e)) {
+      if (ui.ctxMenu.visible) closeCtx()
+      if (ui.dropdownOpen) { ui.dropdownOpen = false; ui.dropdownClosing = false }
+    }
     return
   }
   /* 链接页有浮层（设置下拉 / 新增编辑表单）时：点击空白先关闭浮层，不切视图。

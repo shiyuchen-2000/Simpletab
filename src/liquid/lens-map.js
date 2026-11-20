@@ -90,6 +90,25 @@ export function lensLayout(width, height, size) {
   ]
 }
 
+/* 放置用矩形：边带向两侧各扩展 1px，与角贴图重叠，消除九宫格拼接处的
+   "无位移"细线。贴图仍用 lensLayout 生成（不重叠），只在 feImage 落位时
+   拉伸 2px 覆盖接缝；边带内容沿拉伸方向均匀，拉伸不会造成可见变形。 */
+export function lensPlacement(width, height, size) {
+  const across = Math.max(1, width - size * 2)
+  const down = Math.max(1, height - size * 2)
+  const o = 1
+  return [
+    [0, 0, size, size],
+    [width - size, 0, size, size],
+    [0, height - size, size, size],
+    [width - size, height - size, size, size],
+    [size - o, 0, across + o * 2, size],
+    [size - o, height - size, across + o * 2, size],
+    [0, size - o, size, down + o * 2],
+    [width - size, size - o, size, down + o * 2],
+  ]
+}
+
 // 用比两块贴图宽 1px 的探针表面读取像素：红 = 水平弯曲，绿 = 垂直弯曲，128 为无
 function tilePixels(radius, bezel, corner, power) {
   const size = Math.max(1, Math.ceil(Math.max(radius, bezel)))

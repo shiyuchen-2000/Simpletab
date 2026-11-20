@@ -46,7 +46,7 @@
   background:var(--search-bg);
   border:1px solid var(--glass-border);
   box-shadow:0 12px 38px rgba(0,30,34,.26);
-  transition:width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+  transition:width .55s var(--ease), scale .55s var(--ease), background .45s var(--ease), border-color .45s var(--ease), box-shadow .45s;
   cursor:text;
   /* 独立合成层：避免宽度动画期间毛玻璃 ::before 每帧重采样导致边缘抖动 */
   transform:translateZ(0);will-change:width;
@@ -88,18 +88,23 @@
 /* 沉入式：常态微俯视浮起，聚焦沿 Z 轴下沉 + 扶正 + accent 辉光 */
 html[data-search-anim="sink"] .search-bar{
   transform:perspective(900px) rotateX(2deg);
-  transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+  transition:transform .45s var(--ease), width .55s var(--ease), scale .55s var(--ease), background .45s var(--ease), border-color .45s var(--ease), box-shadow .45s;
 }
 html[data-search-anim="sink"] .search-bar:focus-within{
+  /* 沉入：聚焦时沿 Z 轴下沉 + 扶正（保留透视缩小，这是动画核心视觉） */
   transform:perspective(900px) translateZ(-28px) rotateX(0deg);
   box-shadow:0 0 0 4px rgba(var(--accent-rgb),.15), 0 8px 40px rgba(var(--accent-rgb),.35), inset 0 2px 10px rgba(0,0,0,.12);
 }
 /* 浮升式：常态平置，聚焦沿 Z 轴上浮靠近 + 投影增强 */
 html[data-search-anim="lift"] .search-bar{
   transform:perspective(900px);
-  transition:transform .45s var(--ease), width .5s var(--ease), background .4s var(--ease), box-shadow .3s;
+  /* 浮升以底边为锚点：聚焦向上放大，失焦回落时底边保持不动，
+     避免围绕中心缩放导致底边在动画中上移 1.6px 的观感 */
+  transform-origin:50% 100%;
+  transition:transform .45s var(--ease), width .55s var(--ease), scale .55s var(--ease), background .45s var(--ease), border-color .45s var(--ease), box-shadow .45s;
 }
 html[data-search-anim="lift"] .search-bar:focus-within{
+  /* 浮升：聚焦时上浮靠近并放大（这是该动画的核心视觉，不做尺寸补偿） */
   transform:perspective(900px) translateZ(30px) scale(1.02);
   box-shadow:0 0 0 3px rgba(var(--accent-rgb),.28), 0 18px 50px rgba(0,30,34,.32);
 }

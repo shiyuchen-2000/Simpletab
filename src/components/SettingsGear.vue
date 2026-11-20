@@ -1,11 +1,18 @@
 <script setup>
 import { watch } from 'vue'
-import { ui, startTour, setView } from '../store'
+import { state, ui, startTour, setView } from '../store'
 
 function onGearClick() {
+  /* 离开链接页的收起动画期间（linksLeaving）不再接受点击：
+     此时视图尚未切到主页，齿轮仍可见，若打开下拉会留在主页且齿轮已隐藏、无法再关闭 */
+  if (ui.linksLeaving || state.view !== 'links') return
   if (ui.dropdownOpen) ui.dropdownClosing = true   // 关闭带退出动画
   else ui.dropdownOpen = true
 }
+/* 视图一旦离开链接页，强制收起设置下拉（兜底：覆盖所有切页路径） */
+watch(() => state.view, v => {
+  if (v !== 'links') { ui.dropdownOpen = false; ui.dropdownClosing = false }
+})
 /* 下拉关闭动画：先播退出动画（closing），动画结束再真正隐藏 */
 watch(() => ui.dropdownClosing, v => {
   if (!v) return

@@ -29,9 +29,10 @@ async function bootstrap() {
     }, 0)
   }
   createApp(App).mount('#app')
-  // 液态玻璃折射：挂载后空闲启动，不阻塞首屏
-  if ('requestIdleCallback' in window) requestIdleCallback(() => initLiquidGlass(), { timeout: 1200 })
-  else setTimeout(initLiquidGlass, 120)
+  /* 液态玻璃折射：搜索框要等材质就绪才展开，启动不能拖太久；
+     用短 idle 超时兼顾首屏渲染 */
+  if ('requestIdleCallback' in window) requestIdleCallback(() => initLiquidGlass(), { timeout: 300 })
+  else setTimeout(initLiquidGlass, 60)
   /* 标签页 favicon 兜底：Edge/Chromium 对 newtab 覆盖页的静态 favicon 有时不刷新到标签栏，
      页面加载后动态重设 favicon link 可触发浏览器重新抓取并更新标签图标 */
   setTimeout(ensureTabFavicon, 0)
